@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { CreateJobDTO } from "./dto/create-job.dto";
-import { JobParamDTO, JobQueryDTO } from "./dto/param-query.dto";
+import { ParamDTO, QueryDTO } from "../common/dto/param-query.dto";
 import { Job } from "./jobs.entity";
 import { Company } from "src/companies/companies.entity";
 
@@ -18,7 +18,7 @@ export class JobService {
         return company;
     }
 
-    async getJobs(query: JobQueryDTO): Promise<{jobs: Job[], total: number }> {
+    async getJobs(query: QueryDTO): Promise<{ jobs: Job[], total: number }> {
 
         const {
             searchText = "",
@@ -35,7 +35,13 @@ export class JobService {
         const [jobs, total] = await this.jobRepository
                     .createQueryBuilder("job")
                     .where(
-                        `(job.name ILIKE :searchText OR job.visaName ILIKE :searchText) AND job.deleted = false`, 
+                        `
+                        (
+                            job.name LIKE :searchText OR 
+                            job.visaName LIKE :searchText
+                        ) 
+                        AND job.deleted = false
+                        `, 
                         {
                             searchText: `%${searchText}%`
                         }
@@ -48,6 +54,7 @@ export class JobService {
                         "visaIssuingCompany.id", // certain fields of visaIssuingCompany
                         "visaIssuingCompany.name"
                     ])
+                    .orderBy("job.createdAt", "DESC")
                     .skip(parseInt(skip))
                     .take(parseInt(limit))
                     .getManyAndCount()
@@ -79,7 +86,7 @@ export class JobService {
         
     }
 
-    async editJob(paramsBody: CreateJobDTO & JobParamDTO): Promise<Job | null> {
+    async editJob(paramsBody: CreateJobDTO & ParamDTO): Promise<Job | null> {
 
         const { 
             id,

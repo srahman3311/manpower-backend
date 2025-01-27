@@ -1,16 +1,20 @@
 import { IsString, IsOptional } from "class-validator";
+import { AgentCategory } from "../agent.entity";
 
-export class CreateCompanyDTO {
+export class CreateAgentDTO {
+
+    @IsString()
+    category: AgentCategory
 
     @IsString()
     name: string
 
     @IsString()
-    email: string
+    phone: string
 
     @IsOptional()
     @IsString()
-    phone?: string
+    email?: string
 
     @IsOptional()
     @IsString()

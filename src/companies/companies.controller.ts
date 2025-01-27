@@ -1,13 +1,17 @@
 import { 
     Controller, 
+    Query,
     Body, 
     Get, 
     Post, 
-    Param 
+    Param, 
+    UseGuards 
 } from "@nestjs/common";
 import { CompanyService } from "./companies.service";
 import { CreateCompanyDTO } from "./dto/create-company.dto";
 import { Company } from "./companies.entity";
+import { AuthGuard } from "src/auth/auth.guard";
+import { ParamDTO, QueryDTO } from "src/common/dto/param-query.dto";
 
 @Controller("api/companies")
 
@@ -15,9 +19,10 @@ export class CompanyController {
 
     constructor(private readonly companyService: CompanyService) {}
 
-    @Get("") 
-    getCompanies(): Promise<Company[]> {
-        return this.companyService.getCompanies()
+    @UseGuards(AuthGuard)
+    @Get("")
+    getCompanies(@Query() queryDto: QueryDTO): Promise<{ companies: Company[], total: number }> {
+        return this.companyService.getCompanies(queryDto)
     }
 
     @Get(":id") 

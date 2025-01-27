@@ -1,6 +1,6 @@
 import { IsOptional, IsString } from "class-validator";
 
-export class JobQueryDTO {
+export class QueryDTO {
 
     @IsOptional()
     @IsString()
@@ -16,7 +16,7 @@ export class JobQueryDTO {
 
 }
 
-export class JobParamDTO {
+export class ParamDTO {
 
     @IsOptional()
     @IsString()

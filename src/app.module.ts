@@ -1,8 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from './auth/auth.module';
 import { CompanyModule } from './companies/companies.module';
 import { JobModule } from './jobs/jobs.module';
+import { AgentModule } from './agents/agents.module';
+import { UserModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -13,7 +16,7 @@ import { JobModule } from './jobs/jobs.module';
       imports: [ConfigModule], 
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        type: configService.get<"postgres">("DATABASE_TYPE"),
+        type: configService.get<"mysql">("DATABASE_TYPE"),
         host: configService.get<string>("DATABASE_HOST"),
         port: configService.get<number>("DATABASE_PORT"),
         username: configService.get<string>("DATABASE_USERNAME"),
@@ -24,8 +27,11 @@ import { JobModule } from './jobs/jobs.module';
         migrations: [__dirname + "/migrations/**/*{.ts, .js}"]
       })
     }),
+    AuthModule,
     CompanyModule,
-    JobModule
+    AgentModule,
+    JobModule,
+    UserModule
   ]
 })
 
