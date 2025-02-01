@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { validate } from "class-validator";
@@ -59,6 +59,42 @@ export class CompanyService {
         const errors = await validate(company);
         console.log(errors);
         return this.companyRepository.save(company);
+    }
+
+    async editCompany(paramsBody: CreateCompanyDTO & ParamDTO): Promise<Company | null> {
+    
+        const { 
+            id,
+            name, 
+            email, 
+            phone, 
+            address
+        } = paramsBody;
+
+        const parsedId = parseInt(id as string);
+
+        let fieldsToUpdate: Partial<Company> = {
+            name, 
+            email, 
+            phone, 
+            address
+        };
+
+        const result = await this.companyRepository.update(
+            { id: parsedId },
+            fieldsToUpdate
+        );
+
+        if(result.affected === 0) {
+            throw new NotFoundException("Company Not Found")
+        }
+
+        return this.companyRepository.findOne({ where: { id: parsedId } });
+            
+    }
+    
+    async deleteCompany(id?: string): Promise<void> {
+        await this.companyRepository.update({ id: parseInt(id as string) }, { deleted: true })
     }
 
 }

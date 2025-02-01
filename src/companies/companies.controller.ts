@@ -3,7 +3,9 @@ import {
     Query,
     Body, 
     Get, 
-    Post, 
+    Post,
+    Patch,
+    Delete, 
     Param, 
     UseGuards 
 } from "@nestjs/common";
@@ -25,14 +27,34 @@ export class CompanyController {
         return this.companyService.getCompanies(queryDto)
     }
 
+    @UseGuards(AuthGuard)
     @Get(":id") 
     getCompanyById(@Param() params: { id: number }): Promise<Company | null> {
         return this.companyService.getCompanyById(params.id)
     }
 
+    @UseGuards(AuthGuard)
     @Post("create")
     createCompany(@Body() createCompanyDto: CreateCompanyDTO): Promise<Company> {
         return this.companyService.createCompany(createCompanyDto);
+    }
+
+    @UseGuards(AuthGuard)
+    @Patch(":id/edit")
+    editCompany(
+        @Param() paramDto: ParamDTO, 
+        @Body() createCompanyDto: CreateCompanyDTO
+    ): Promise<Company | null> {
+        return this.companyService.editCompany({
+            ...paramDto,
+            ...createCompanyDto
+        })
+    }
+
+    @UseGuards(AuthGuard)
+    @Delete(":id/delete")
+    deleteCompany(@Param() paramDto: ParamDTO): Promise<void> {
+        return this.companyService.deleteCompany(paramDto.id)
     }
 
 }

@@ -3,9 +3,11 @@ import {
     Entity, 
     PrimaryGeneratedColumn, 
     CreateDateColumn, 
-    UpdateDateColumn 
+    UpdateDateColumn,
+    ManyToOne,
+    JoinColumn 
 } from "typeorm";
-import { IsOptional, IsString } from "class-validator";
+import { Address } from "src/common/addresses/address.entity";
 
 export enum AgentCategory {
     A = "A",
@@ -28,23 +30,39 @@ export class Agent {
     updatedAt: Date
 
     @Column({ type: "char" })
-    @IsString()
     category: AgentCategory
 
     @Column()
-    @IsString()
-    name: string
+    firstName: string
+
+    @Column()
+    lastName: string
 
     @Column({ unique: true })
-    @IsString()
     phone: string 
 
-    @Column({ nullable: true, default: null })
-    @IsOptional()
-    @IsString()
+    @Column({ nullable: true })
     email?: string
+
+    @Column({ nullable: true })
+    imageUrl?: string
+
+    // This is a plain column in the database.
+    // It stores the foreign key referencing the id column of the address table.
+    @Column()
+    addressId: number
     
-    @Column({ nullable: true, default: null })
-    address?: string 
+    // This is a virtual field created by TypeORM.
+    // It is not stored in the database but is used to define the relationship.
+    // When you query the Agent entity and include the Address relation, TypeORM will 
+    // automatically fetch and populate the address field.
+    // @ManyToOne decorator to define this relationship on the Agent side, 
+    // because the same address can be assigned to multiple agents.
+    @ManyToOne(() => Address, { nullable: true }) 
+    @JoinColumn({ name: "addressId" }) 
+    address: Address
+
+    @Column({ default: false })
+    deleted: boolean
 
 }

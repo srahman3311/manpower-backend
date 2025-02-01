@@ -37,7 +37,7 @@ export class Job {
     // This is a plain column in the database.
     // It stores the foreign key referencing the id column of the Company table.
     @Column()
-    visaIssuingCompanyId: number
+    visaCompanyId: number
 
     // This is a virtual field created by TypeORM.
     // It is not stored in the database but is used to define the relationship.
@@ -46,8 +46,8 @@ export class Job {
     // @ManyToOne decorator to define this relationship on the Job side, 
     // because multiple jobs can belong to the same single company.
     @ManyToOne(() => Company, { nullable: false })
-    @JoinColumn({ name: "visaIssuingCompanyId" })
-    visaIssuingCompany: Company
+    @JoinColumn({ name: "visaCompanyId" })
+    visaCompany: Company
 
     @Column({ nullable: false })
     visaQuantity: number

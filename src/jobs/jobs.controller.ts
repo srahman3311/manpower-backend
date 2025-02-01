@@ -23,10 +23,11 @@ export class JobController {
 
     @Post("create")
     createJob(@Body() createJobDto: CreateJobDTO): Promise<Job> {
+        console.log(createJobDto)
         return this.jobService.createJob(createJobDto);
     }
 
-    @Patch("edit/:id")
+    @Patch(":id/edit")
     editJob(
         @Param() params: ParamDTO, 
         @Body() createJobDto: CreateJobDTO
@@ -34,7 +35,7 @@ export class JobController {
         return this.jobService.editJob({...params, ...createJobDto});
     }
 
-    @Delete(":id")
+    @Delete(":id/delete")
     deleteJob(@Param() params: ParamDTO): { message: string } {
         this.jobService.deleteJob(parseInt(params.id as string));
         return {

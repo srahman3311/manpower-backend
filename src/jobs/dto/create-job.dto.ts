@@ -5,7 +5,7 @@ export class CreateJobDTO {
     name: string;
 
     @IsNumber()
-    visaIssuingCompanyId: number;
+    visaCompanyId: number;
 
     @IsString()
     visaName: string

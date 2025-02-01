@@ -28,7 +28,7 @@ export class JobService {
 
         // If we want to fetch the entire populated document or documents
         // const jobs = this.jobRepository.find({
-        //     relations: ["visaIssuingCompany"]
+        //     relations: ["visaCompany"]
         // });
 
         // If we want certain fields, not all. 
@@ -46,13 +46,13 @@ export class JobService {
                             searchText: `%${searchText}%`
                         }
                     )
-                    .leftJoinAndSelect("job.visaIssuingCompany", "visaIssuingCompany")
+                    .leftJoinAndSelect("job.visaCompany", "visaCompany")
                     .select([
                         "job", // all fields of job
                         // "job.id" // If we want certain fields of job
                         // "job.name"
-                        "visaIssuingCompany.id", // certain fields of visaIssuingCompany
-                        "visaIssuingCompany.name"
+                        "visaCompany.id", // certain fields of visaCompany
+                        "visaCompany.name"
                     ])
                     .orderBy("job.createdAt", "DESC")
                     .skip(parseInt(skip))
@@ -68,15 +68,16 @@ export class JobService {
         const { 
             name,
             visaName,
-            visaIssuingCompanyId,
+            visaCompanyId,
             visaQuantity,
             visaUnitPrice
         } = createJobDto;
+        console.log(createJobDto)
 
         const job = this.jobRepository.create({
             name,
             visaName,
-            visaIssuingCompany: { id: visaIssuingCompanyId } as Company,
+            visaCompany: { id: visaCompanyId } as Company,
             visaUnitPrice,
             visaQuantity,
             totalPrice: (visaQuantity * visaUnitPrice)
@@ -92,7 +93,7 @@ export class JobService {
             id,
             name,
             visaName,
-            visaIssuingCompanyId,
+            visaCompanyId,
             visaQuantity,
             visaUnitPrice
         } = paramsBody;
@@ -102,7 +103,7 @@ export class JobService {
         let fieldsToUpdate: Partial<Job> = {
             name,
             visaName,
-            visaIssuingCompany: { id: visaIssuingCompanyId } as Company,
+            visaCompany: { id: visaCompanyId } as Company,
             visaUnitPrice,
             visaQuantity,
             totalPrice: (visaQuantity * visaUnitPrice)

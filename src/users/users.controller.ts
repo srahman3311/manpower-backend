@@ -54,6 +54,7 @@ export class UserController {
         })
     }
 
+    @UseGuards(AuthGuard)
     @Delete(":id/delete")
     deleteUser(@Param() paramDto: ParamDTO): Promise<void> {
         return this.userService.deleteUser(paramDto.id)

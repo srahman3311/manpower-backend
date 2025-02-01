@@ -6,6 +6,7 @@ import { CompanyModule } from './companies/companies.module';
 import { JobModule } from './jobs/jobs.module';
 import { AgentModule } from './agents/agents.module';
 import { UserModule } from './users/users.module';
+import { PassengerModule } from './passengers/passenger.module';
 
 @Module({
   imports: [
@@ -31,7 +32,8 @@ import { UserModule } from './users/users.module';
     CompanyModule,
     AgentModule,
     JobModule,
-    UserModule
+    UserModule,
+    PassengerModule
   ]
 })
 
