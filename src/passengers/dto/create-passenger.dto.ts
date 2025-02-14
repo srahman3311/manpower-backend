@@ -1,9 +1,12 @@
 import { IsString, IsOptional, IsNumber } from "class-validator";
-import { AddressDTO } from "src/common/addresses/address.dto";
+import { AddressDTO } from "src/global/addresses/address.dto";
 import { PassportDTO } from "./passport.dto";
 import { MedicalDTO } from "./medical.dto";
 
 export class CreatePassengerDTO {
+
+    @IsNumber()
+    tenantId: number
 
     @IsString()
     name: string

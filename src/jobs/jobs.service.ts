@@ -2,9 +2,10 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { CreateJobDTO } from "./dto/create-job.dto";
-import { ParamDTO, QueryDTO } from "../common/dto/param-query.dto";
-import { Job } from "./jobs.entity";
-import { Company } from "src/companies/companies.entity";
+import { ParamDTO, QueryDTO } from "../global/dto/param-query.dto";
+import { Job } from "./job.entity";
+import { Company } from "src/companies/company.entity";
+import { Tenant } from "src/tenants/tenant.entity";
 
 @Injectable()
 export class JobService {
@@ -66,8 +67,11 @@ export class JobService {
     createJob(createJobDto: CreateJobDTO): Promise<Job> {
 
         const { 
+            tenantId,
             name,
             visaName,
+            visaType,
+            expiryDate,
             visaCompanyId,
             visaQuantity,
             visaUnitPrice
@@ -75,8 +79,11 @@ export class JobService {
         console.log(createJobDto)
 
         const job = this.jobRepository.create({
+            tenant: { id: tenantId } as Tenant,
             name,
             visaName,
+            visaType,
+            expiryDate,
             visaCompany: { id: visaCompanyId } as Company,
             visaUnitPrice,
             visaQuantity,
@@ -93,6 +100,8 @@ export class JobService {
             id,
             name,
             visaName,
+            visaType,
+            expiryDate,
             visaCompanyId,
             visaQuantity,
             visaUnitPrice
@@ -103,6 +112,8 @@ export class JobService {
         let fieldsToUpdate: Partial<Job> = {
             name,
             visaName,
+            visaType,
+            expiryDate: new Date(expiryDate),
             visaCompany: { id: visaCompanyId } as Company,
             visaUnitPrice,
             visaQuantity,

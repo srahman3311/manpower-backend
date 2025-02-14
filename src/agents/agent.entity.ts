@@ -7,7 +7,8 @@ import {
     ManyToOne,
     JoinColumn 
 } from "typeorm";
-import { Address } from "src/common/addresses/address.entity";
+import { Address } from "src/global/addresses/address.entity";
+import { Tenant } from "src/tenants/tenant.entity";
 
 export enum AgentCategory {
     A = "A",
@@ -19,6 +20,13 @@ export enum AgentCategory {
 @Entity("agents")
 
 export class Agent {
+
+    @Column()
+    tenantId: number
+
+    @ManyToOne(() => Tenant) 
+    @JoinColumn({ name: "tenantId" }) 
+    tenant: Tenant
 
     @PrimaryGeneratedColumn()
     id: number

@@ -13,9 +13,9 @@ import {
 import { Request } from "express";
 import { UserService } from "./users.service";
 import { CreateUserDTO } from "./dto/create-user.dto";
-import { User } from "./users.entity";
+import { User } from "./entities/user.entity";
 import { AuthGuard } from "src/auth/auth.guard";
-import { ParamDTO, QueryDTO } from "src/common/dto/param-query.dto";
+import { ParamDTO, QueryDTO } from "src/global/dto/param-query.dto";
 
 @Controller("api/users")
 
@@ -30,19 +30,19 @@ export class UserController {
         return this.userService.getUserById(id)
     }
 
-    @UseGuards(AuthGuard)
+    // @UseGuards(AuthGuard)
     @Get("")
     getUsers(@Query() queryDto: QueryDTO): Promise<{ users: User[], total: number }> {
         return this.userService.getUsers(queryDto)
     }
 
-    @UseGuards(AuthGuard)
+    // @UseGuards(AuthGuard)
     @Post("create")
     createUser(@Body() createUserDto: CreateUserDTO): Promise<User> {
         return this.userService.createUser(createUserDto);
     }
 
-    @UseGuards(AuthGuard)
+    // @UseGuards(AuthGuard)
     @Patch(":id/edit")
     editUser(
         @Param() paramDto: ParamDTO, 

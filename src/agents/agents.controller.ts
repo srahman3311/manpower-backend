@@ -2,7 +2,7 @@ import { Body, Controller, Get, Post, Patch, Delete, Query, Param } from "@nestj
 import { AgentService } from "./agents.service";
 import { Agent } from "./agent.entity";
 import { CreateAgentDTO } from "./dto/create-agent.dto";
-import { QueryDTO, ParamDTO } from "src/common/dto/param-query.dto";
+import { QueryDTO, ParamDTO } from "src/global/dto/param-query.dto";
 
 @Controller("api/agents") 
 

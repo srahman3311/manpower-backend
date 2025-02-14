@@ -1,8 +1,8 @@
 import { Controller, Post, Get, Body, Patch, Param, Query, Delete } from "@nestjs/common"
 import { JobService } from "./jobs.service"
 import { CreateJobDTO } from "./dto/create-job.dto";
-import { ParamDTO, QueryDTO } from "../common/dto/param-query.dto";
-import { Job } from "./jobs.entity";
+import { ParamDTO, QueryDTO } from "../global/dto/param-query.dto";
+import { Job } from "./job.entity";
 
 @Controller("api/jobs")
 

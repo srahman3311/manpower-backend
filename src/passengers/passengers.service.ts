@@ -5,10 +5,11 @@ import { Passenger } from "./entities/passenger.entity";
 import { Medical } from "./entities/medical.entity";
 import { Passport } from "./entities/passport.entity";
 import { CreatePassengerDTO } from "./dto/create-passenger.dto";
-import { QueryDTO, ParamDTO } from "src/common/dto/param-query.dto";
+import { QueryDTO, ParamDTO } from "src/global/dto/param-query.dto";
 import { MedicalDTO } from "./dto/medical.dto";
-import { AddressService } from "src/common/addresses/address.service";
+import { AddressService } from "src/global/addresses/addresses.service";
 import { PassportDTO } from "./dto/passport.dto";
+import { Tenant } from "src/tenants/tenant.entity";
 
 @Injectable()
 export class PassengerService {
@@ -79,9 +80,11 @@ export class PassengerService {
         const passenger = this.passengerRepository.create({
             ...createPassengerDto,
             email: createPassengerDto.email ?? null,
+            tenant: {id: createPassengerDto.tenantId} as Tenant,
             address,
             medical,
-            passport
+            passport,
+            tenantId: undefined
         });
         
         return this.passengerRepository.save(passenger);

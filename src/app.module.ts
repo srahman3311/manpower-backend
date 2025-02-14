@@ -2,11 +2,14 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
+import { TenantModule } from './tenants/tenants.module';
 import { CompanyModule } from './companies/companies.module';
 import { JobModule } from './jobs/jobs.module';
 import { AgentModule } from './agents/agents.module';
 import { UserModule } from './users/users.module';
-import { PassengerModule } from './passengers/passenger.module';
+import { PassengerModule } from './passengers/passengers.module';
+import { ExpenseModule } from './expenses/expenses.module';
+import { RevenueModule } from './revenues/revenues.module';
 
 @Module({
   imports: [
@@ -29,11 +32,14 @@ import { PassengerModule } from './passengers/passenger.module';
       })
     }),
     AuthModule,
+    TenantModule,
     CompanyModule,
     AgentModule,
     JobModule,
     UserModule,
-    PassengerModule
+    PassengerModule,
+    ExpenseModule,
+    RevenueModule
   ]
 })
 

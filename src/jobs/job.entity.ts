@@ -8,12 +8,25 @@ import {
     JoinColumn
 } from "typeorm";
 import { IsNotEmpty, Length } from "class-validator";
-import { Company } from "../companies/companies.entity";
+import { Company } from "../companies/company.entity";
+import { Tenant } from "src/tenants/tenant.entity";
+
+export enum VisaType {
+    Sale = "sale",
+    Processing = "processing"
+}
 
 // Name of the table
 @Entity("jobs") 
 
 export class Job {
+
+    @Column()
+    tenantId: number
+
+    @ManyToOne(() => Tenant) 
+    @JoinColumn({ name: "tenantId" }) 
+    tenant: Tenant
     
     @PrimaryGeneratedColumn()
     id: number
@@ -33,6 +46,9 @@ export class Job {
     @IsNotEmpty()
     @Length(1, 255)
     visaName: string
+
+    @Column({ nullable: false })
+    visaType: VisaType
 
     // This is a plain column in the database.
     // It stores the foreign key referencing the id column of the Company table.
@@ -57,6 +73,9 @@ export class Job {
 
     @Column({ nullable: false })
     totalPrice: number
+    
+    @Column({ nullable: true })
+    expiryDate: Date
 
     @Column({ default: false })
     deleted: boolean

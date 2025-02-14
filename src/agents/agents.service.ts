@@ -2,9 +2,10 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Agent } from "./agent.entity";
-import { QueryDTO, ParamDTO } from "src/common/dto/param-query.dto";
+import { QueryDTO, ParamDTO } from "src/global/dto/param-query.dto";
 import { CreateAgentDTO } from "./dto/create-agent.dto";
-import { AddressService } from "src/common/addresses/address.service";
+import { AddressService } from "src/global/addresses/addresses.service";
+import { Tenant } from "src/tenants/tenant.entity";
 
 @Injectable()
 export class AgentService {
@@ -59,11 +60,24 @@ export class AgentService {
 
     async createAgent(createAgentDto: CreateAgentDTO): Promise<Agent> {
 
+        const { 
+            tenantId,
+            firstName,
+            lastName,
+            email,
+            phone, 
+            category,
+        } = createAgentDto;
+
         let address = await this.addressService.createAddress(createAgentDto.address);
 
         const agent = this.agentRepository.create({
-            ...createAgentDto,
-            email: createAgentDto.email ?? null,
+            firstName,
+            lastName,
+            phone,
+            category,
+            tenant: { id: tenantId } as Tenant,
+            email: email ?? null,
             address
         });
         

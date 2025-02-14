@@ -1,8 +1,8 @@
 import { Body, Controller, Get, Post, Patch, Delete, Query, Param } from "@nestjs/common";
-import { PassengerService } from "./passenger.service";
+import { PassengerService } from "./passengers.service";
 import { Passenger } from "./entities/passenger.entity";
 import { CreatePassengerDTO } from "./dto/create-passenger.dto";
-import { QueryDTO, ParamDTO } from "src/common/dto/param-query.dto";
+import { QueryDTO, ParamDTO } from "src/global/dto/param-query.dto";
 
 @Controller("api/passengers") 
 

@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { QueryDTO } from "src/common/dto/param-query.dto";
+import { QueryDTO } from "src/global/dto/param-query.dto";
 import { AddressDTO } from "./address.dto";
-import { Address } from "src/common/addresses/address.entity";
+import { Address } from "src/global/addresses/address.entity";
 
 @Injectable()
 

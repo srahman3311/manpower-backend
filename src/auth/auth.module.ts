@@ -2,6 +2,7 @@ import { Module, forwardRef } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { JwtModule } from "@nestjs/jwt";
 import { UserModule } from "src/users/users.module";
+import { TenantModule } from "src/tenants/tenants.module";
 import { AuthService } from "./auth.service";
 import { AuthController } from "./auth.controller";
 
@@ -11,6 +12,7 @@ import { AuthController } from "./auth.controller";
         // UserModule and AuthModule both depends on each other which causes circular
         // dependency. To resolve this we need to use forwardRef
         forwardRef(() => UserModule),
+        TenantModule,
         JwtModule.registerAsync({
             imports: [ConfigModule],
             inject: [ConfigService],

@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { Job } from "./jobs.entity";
+import { Job } from "./job.entity";
 import { JobController } from "./jobs.controller";
 import { JobService } from "./jobs.service";
 

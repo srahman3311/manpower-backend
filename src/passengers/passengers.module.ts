@@ -1,11 +1,11 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { PassengerController } from "./passenger.controller";
+import { PassengerController } from "./passengers.controller";
 import { Passenger } from "./entities/passenger.entity";
 import { Medical } from "./entities/medical.entity";
 import { Passport } from "./entities/passport.entity";
-import { PassengerService } from "./passenger.service";
-import { AddressModule } from "src/common/addresses/address.module";
+import { PassengerService } from "./passengers.service";
+import { AddressModule } from "src/global/addresses/addresses.module";
 
 @Module({
     imports: [

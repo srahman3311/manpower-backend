@@ -8,15 +8,23 @@ import {
     ManyToOne,
     JoinColumn 
 } from "typeorm";
-import { Address } from "src/common/addresses/address.entity";
+import { Address } from "src/global/addresses/address.entity";
 import { Agent } from "src/agents/agent.entity";
-import { Job } from "src/jobs/jobs.entity";
+import { Job } from "src/jobs/job.entity";
 import { Passport } from "./passport.entity";
 import { Medical } from "./medical.entity";
+import { Tenant } from "src/tenants/tenant.entity";
 
 @Entity("passengers")
 
 export class Passenger {
+
+    @Column()
+    tenantId: number
+
+    @ManyToOne(() => Tenant) 
+    @JoinColumn({ name: "tenantId" }) 
+    tenant: Tenant
 
     @PrimaryGeneratedColumn()
     id: number

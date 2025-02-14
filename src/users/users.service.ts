@@ -4,25 +4,41 @@ import {
     BadRequestException,  
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { User } from "./users.entity";
+import { Repository, In } from "typeorm";
+import { User } from "./entities/user.entity";
+import { Role } from "./entities/role.entity";
+import { Permission } from "./entities/permission.entity";
+import { Tenant } from "src/tenants/tenant.entity";
 import { CreateUserDTO } from "./dto/create-user.dto";
-import { QueryDTO } from "src/common/dto/param-query.dto";
-import { ParamDTO } from "src/common/dto/param-query.dto";
+import { QueryDTO } from "src/global/dto/param-query.dto";
+import { ParamDTO } from "src/global/dto/param-query.dto";
 import { hashPassword } from "../auth/utils/hash.util";
+import { AddressService } from "src/global/addresses/addresses.service";
 
 @Injectable()
 
 export class UserService {
 
-    constructor(@InjectRepository(User) private readonly userRepository: Repository<User>) {}
+    constructor(
+        @InjectRepository(User) private readonly userRepository: Repository<User>,
+        @InjectRepository(Role) private readonly roleRepository: Repository<Role>,
+        @InjectRepository(Permission) private readonly permissionRepository: Repository<Permission>,
+        private readonly addressService: AddressService
+
+    ) {}
 
     async getUserById(id: number): Promise<User | null> {
-        return await this.userRepository.findOne({ where: { id } });
+        return await this.userRepository.findOne({ 
+            where: { id },
+            relations: ["address", "roles", "permissions", "tenant"]  
+        });
     }
 
     async getUserByEmail(email: string): Promise<User | null> {
-        return await this.userRepository.findOne({ where: { email } });
+        return await this.userRepository.findOne({ 
+            where: { email },
+            relations: ["address", "roles", "permissions", "tenant"] 
+        });
     }
 
     async getUsers(query: QueryDTO): Promise<{ users: User[], total: number }> {
@@ -42,11 +58,14 @@ export class UserService {
                                     user.email LIKE :searchText OR 
                                     user.phone LIKE :searchText 
 
-                                ) AND deleted = false`, 
+                                ) AND user.deleted = false`, 
                                 {
                                     searchText: `%${searchText}%`
                                 }
                             )
+                            .leftJoinAndSelect("user.tenant", "tenant")
+                            .leftJoinAndSelect("user.roles", "roles")
+                            .leftJoinAndSelect("user.permissions", "permissions")
                             .orderBy("user.createdAt", "DESC")
                             .skip(parseInt(skip))
                             .take(parseInt(limit))
@@ -64,10 +83,36 @@ export class UserService {
             throw new BadRequestException("password Required")
         }
 
+        const { 
+            tenantId,
+            firstName,
+            lastName,
+            email,
+            phone,
+            roles, 
+            permissions 
+        } = createUserDto;
+
+        const address = await this.addressService.createAddress(createUserDto.address);
+
+        const foundRroles = await this.roleRepository.find({ 
+            where: roles.map(role => ({ name: role })) 
+        });
+        const foundPermissions = await this.permissionRepository.find({
+            where: permissions.map(permission => ({ name: permission }))
+        });
+
         const hash = await hashPassword(createUserDto.password)
         const user = this.userRepository.create({
-            ...createUserDto,
-            password: hash
+            tenant: { id: tenantId } as Tenant,
+            firstName,
+            lastName,
+            email,
+            phone,
+            password: hash,
+            roles: foundRroles,
+            permissions: foundPermissions,
+            address
         });
 
         return this.userRepository.save(user);
@@ -82,18 +127,38 @@ export class UserService {
             lastName,
             phone,
             email,
-            role,
+            roles,
+            permissions,
             password
         } = paramsBody;
+        console.log(paramsBody)
 
         const parsedId = parseInt(id as string);
+
+        const user = await this.getUserById(parsedId)
+
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        await this.addressService.editAddress(
+            user.address.id,
+            paramsBody.address
+        );
+
+        const foundRoles = await this.roleRepository.find({ 
+            where: roles.map(role => ({ name: role })) 
+        });
+    
+        const foundPermissions = await this.permissionRepository.find({
+            where: permissions.map(permission => ({ name: permission }))
+        });
 
         let fieldsToUpdate: Partial<User> = {
             firstName,
             lastName,
             phone,
-            email,
-            role
+            email
         };
 
         if(password) {
@@ -109,6 +174,17 @@ export class UserService {
         if(result.affected === 0) {
             throw new NotFoundException("User Not Found")
         }
+
+        await this.userRepository.createQueryBuilder()
+            .relation(User, "roles")
+            .of(user)
+            .addAndRemove(foundRoles, user.roles);
+
+        await this.userRepository.createQueryBuilder()
+            .relation(User, "permissions")
+            .of(user)
+            .addAndRemove(foundPermissions, user.permissions);
+
 
         return this.userRepository.findOne({ where: { id: parsedId } });
         

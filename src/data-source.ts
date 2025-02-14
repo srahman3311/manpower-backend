@@ -2,8 +2,8 @@ import * as dotenv from 'dotenv';
 // Load environment variables from .env file
 dotenv.config();
 import { DataSource } from 'typeorm';
-import { Company } from './companies/companies.entity';
-import { Job } from './jobs/jobs.entity';
+import { Company } from './companies/company.entity';
+import { Job } from './jobs/job.entity';
 
 export const AppDataSource = new DataSource({
   type: process.env.DATABASE_TYPE as 'postgres',

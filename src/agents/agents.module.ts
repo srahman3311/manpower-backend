@@ -1,9 +1,9 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { AgentController } from "./agent.controller";
+import { AgentController } from "./agents.controller";
 import { AgentService } from "./agents.service";
 import { Agent } from "./agent.entity";
-import { AddressModule } from "src/common/addresses/address.module";
+import { AddressModule } from "src/global/addresses/addresses.module";
 
 @Module({
     imports: [
