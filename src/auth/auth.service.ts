@@ -48,7 +48,7 @@ export class AuthService {
         const { firstName, lastName, email, phone, businessName, password } = registerDto;
         const tenant = await this.tenantService.createTenant({ businessName });
 
-        const user = await this.userService.createUser({
+        const user = await this.userService.createUser(tenant.id, {
             firstName,
             lastName,
             email,
@@ -56,7 +56,6 @@ export class AuthService {
             roles: [UserRole.Tenant],
             permissions: [UserPermission.Read, UserPermission.Write, UserPermission.Delete],
             password,
-            tenantId: tenant.id
         });
 
         if(!user) throw new UnauthorizedException();

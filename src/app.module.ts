@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { TenantModule } from './tenants/tenants.module';
 import { CompanyModule } from './companies/companies.module';
@@ -10,6 +11,7 @@ import { UserModule } from './users/users.module';
 import { PassengerModule } from './passengers/passengers.module';
 import { ExpenseModule } from './expenses/expenses.module';
 import { RevenueModule } from './revenues/revenues.module';
+import { RolesGuard } from './global/guards/RolesGuard.guard';
 
 @Module({
   imports: [
@@ -40,6 +42,12 @@ import { RevenueModule } from './revenues/revenues.module';
     PassengerModule,
     ExpenseModule,
     RevenueModule
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
   ]
 })
 

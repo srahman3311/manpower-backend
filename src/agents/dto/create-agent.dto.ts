@@ -1,11 +1,8 @@
-import { IsString, IsOptional, IsEnum, IsNumber } from "class-validator";
+import { IsString, IsOptional, IsEnum } from "class-validator";
 import { AgentCategory } from "../agent.entity";
 import { AddressDTO } from "src/global/addresses/address.dto";
 
 export class CreateAgentDTO {
-
-    @IsNumber()
-    tenantId: number
 
     @IsEnum(AgentCategory, { message: "agent category must be of one of following - A, B, C & D"})
     category: AgentCategory

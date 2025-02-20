@@ -12,6 +12,7 @@ import { CreateRevenueDTO } from "./dto/create-revenue.dto";
 import { QueryDTO } from "src/global/dto/param-query.dto";
 import { ParamDTO } from "src/global/dto/param-query.dto";
 import { Revenue } from "./revenue.entity";
+import { JwtPayload } from "src/global/types/JwtPayload";
 
 @Injectable()
 
@@ -28,7 +29,7 @@ export class RevenueService {
         });
     }
 
-    async getRevenues(query: QueryDTO): Promise<{ revenues: Revenue[], total: number }> {
+    async getRevenues(query: QueryDTO, ctx: JwtPayload): Promise<{ revenues: Revenue[], total: number }> {
 
         const { 
             searchText = "", 
@@ -42,7 +43,7 @@ export class RevenueService {
                                 `(
                                     revenue.name LIKE :searchText OR 
                                     revenue.description LIKE :searchText
-                                ) AND revenue.deleted = false`, 
+                                ) AND revenue.deleted = false AND revenue.tenantId = ${ctx.tenantId}`, 
                                 {
                                     searchText: `%${searchText}%`
                                 }
@@ -59,10 +60,9 @@ export class RevenueService {
 
     }
 
-    async createRevenue(createRevenueDto: CreateRevenueDTO): Promise<Revenue> {
+    async createRevenue(tenantId: number, createRevenueDto: CreateRevenueDTO): Promise<Revenue> {
 
         const { 
-            tenantId,
             name,
             description,
             amount,

@@ -6,6 +6,7 @@ import { ParamDTO, QueryDTO } from "../global/dto/param-query.dto";
 import { Job } from "./job.entity";
 import { Company } from "src/companies/company.entity";
 import { Tenant } from "src/tenants/tenant.entity";
+import { JwtPayload } from "src/global/types/JwtPayload";
 
 @Injectable()
 export class JobService {
@@ -19,7 +20,7 @@ export class JobService {
         return company;
     }
 
-    async getJobs(query: QueryDTO): Promise<{ jobs: Job[], total: number }> {
+    async getJobs(query: QueryDTO, ctx: JwtPayload): Promise<{ jobs: Job[], total: number }> {
 
         const {
             searchText = "",
@@ -41,7 +42,7 @@ export class JobService {
                             job.name LIKE :searchText OR 
                             job.visaName LIKE :searchText
                         ) 
-                        AND job.deleted = false
+                        AND job.deleted = false AND job.tenantId = ${ctx.tenantId}
                         `, 
                         {
                             searchText: `%${searchText}%`
@@ -64,10 +65,9 @@ export class JobService {
 
     }
 
-    createJob(createJobDto: CreateJobDTO): Promise<Job> {
+    createJob(tenantId: number, createJobDto: CreateJobDTO): Promise<Job> {
 
         const { 
-            tenantId,
             name,
             visaName,
             visaType,

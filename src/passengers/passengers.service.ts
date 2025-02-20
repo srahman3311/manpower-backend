@@ -10,6 +10,7 @@ import { MedicalDTO } from "./dto/medical.dto";
 import { AddressService } from "src/global/addresses/addresses.service";
 import { PassportDTO } from "./dto/passport.dto";
 import { Tenant } from "src/tenants/tenant.entity";
+import { JwtPayload } from "src/global/types/JwtPayload";
 
 @Injectable()
 export class PassengerService {
@@ -32,7 +33,7 @@ export class PassengerService {
         return passenger;
     }
 
-    async getPassengers(query: QueryDTO): Promise<{ passengers: Passenger[], total: number }> {
+    async getPassengers(query: QueryDTO, ctx: JwtPayload): Promise<{ passengers: Passenger[], total: number }> {
     
         const { 
             searchText = "", 
@@ -53,7 +54,7 @@ export class PassengerService {
                                     passenger.phone LIKE :searchText OR
                                     passenger.fatherName LIKE :searchText
 
-                                ) AND passenger.deleted = false`, 
+                                ) AND passenger.deleted = false AND passenger.tenantId = ${ctx.tenantId}`, 
                                 {
                                     searchText: `%${searchText}%`
                                 }
@@ -67,7 +68,7 @@ export class PassengerService {
     
     }
 
-    async createPassenger(createPassengerDto: CreatePassengerDTO): Promise<Passenger> {
+    async createPassenger(tenantId: number, createPassengerDto: CreatePassengerDTO): Promise<Passenger> {
 
         let address = await this.addressService.createAddress(createPassengerDto.address);
 
@@ -80,7 +81,7 @@ export class PassengerService {
         const passenger = this.passengerRepository.create({
             ...createPassengerDto,
             email: createPassengerDto.email ?? null,
-            tenant: {id: createPassengerDto.tenantId} as Tenant,
+            tenant: { id: tenantId } as Tenant,
             address,
             medical,
             passport,

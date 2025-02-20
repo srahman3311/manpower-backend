@@ -14,6 +14,7 @@ import { QueryDTO } from "src/global/dto/param-query.dto";
 import { ParamDTO } from "src/global/dto/param-query.dto";
 import { hashPassword } from "../auth/utils/hash.util";
 import { AddressService } from "src/global/addresses/addresses.service";
+import { JwtPayload } from "src/global/types/JwtPayload";
 
 @Injectable()
 
@@ -41,7 +42,7 @@ export class UserService {
         });
     }
 
-    async getUsers(query: QueryDTO): Promise<{ users: User[], total: number }> {
+    async getUsers(query: QueryDTO, ctx: JwtPayload): Promise<{ users: User[], total: number }> {
 
         const { 
             searchText = "", 
@@ -58,7 +59,7 @@ export class UserService {
                                     user.email LIKE :searchText OR 
                                     user.phone LIKE :searchText 
 
-                                ) AND user.deleted = false`, 
+                                ) AND user.deleted = false AND user.tenantId = ${ctx.tenantId}`, 
                                 {
                                     searchText: `%${searchText}%`
                                 }
@@ -75,7 +76,7 @@ export class UserService {
 
     }
 
-    async createUser(createUserDto: CreateUserDTO): Promise<User> {
+    async createUser(tenantId: number, createUserDto: CreateUserDTO): Promise<User> {
 
         // Password is optional for editing user so in dto password has been marked as optional
         // But as it is mandatory for creating a new one so we must do a validation here
@@ -84,7 +85,6 @@ export class UserService {
         }
 
         const { 
-            tenantId,
             firstName,
             lastName,
             email,

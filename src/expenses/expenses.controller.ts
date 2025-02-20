@@ -16,6 +16,9 @@ import { CreateExpenseDTO } from "./dto/create-expense.dto";
 import { Expense } from "./expense.entity";
 // import { AuthGuard } from "src/auth/auth.guard";
 import { ParamDTO, QueryDTO } from "src/global/dto/param-query.dto";
+import { RolesAuth } from "src/global/decorators/RolesAuth.decorator";
+import { RequestContext } from "src/global/decorators/RequestContext.decorator";
+import { JwtPayload } from "src/global/types/JwtPayload";
 
 @Controller("api/expenses")
 
@@ -32,14 +35,20 @@ export class ExpenseController {
 
     // @UseGuards(AuthGuard)
     @Get("")
-    getExpenses(@Query() queryDto: QueryDTO): Promise<{ expenses: Expense[], total: number }> {
-        return this.expenseService.getExpenses(queryDto)
+    getExpenses(
+        @Query() queryDto: QueryDTO,
+        @RequestContext() ctx: JwtPayload
+    ): Promise<{ expenses: Expense[], total: number }> {
+        return this.expenseService.getExpenses(queryDto, ctx)
     }
 
     // @UseGuards(AuthGuard)
     @Post("create")
-    createExpense(@Body() createExpenseDto: CreateExpenseDTO): Promise<Expense> {
-        return this.expenseService.createExpense(createExpenseDto);
+    createExpense(
+        @Body() createExpenseDto: CreateExpenseDTO,
+        @RequestContext() ctx: JwtPayload
+    ): Promise<Expense> {
+        return this.expenseService.createExpense(ctx.tenantId, createExpenseDto);
     }
 
     @Patch(":id/edit")
@@ -54,6 +63,7 @@ export class ExpenseController {
             jobId, 
             passengerId 
         } = createExpenseDto;
+        console.log(paramDto)
         return this.expenseService.editExpense(
             parseInt(paramDto.id as string), 
             { 
@@ -63,6 +73,19 @@ export class ExpenseController {
                 jobId, 
                 passengerId 
             }
+        )
+    }
+
+    
+    @Patch(":id/toggle")
+    @RolesAuth(["admin", "director", "tenant", "manager"])
+    toggleApprovalStatus(
+        @Param() paramDto: ParamDTO, 
+        @RequestContext() ctx: JwtPayload
+    ): Promise<Expense | null> {
+        return this.expenseService.toggleApprovalStatus(
+            parseInt(paramDto.id as string), 
+            ctx
         )
     }
 

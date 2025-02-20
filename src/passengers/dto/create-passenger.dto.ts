@@ -5,9 +5,6 @@ import { MedicalDTO } from "./medical.dto";
 
 export class CreatePassengerDTO {
 
-    @IsNumber()
-    tenantId: number
-
     @IsString()
     name: string
 

@@ -12,6 +12,12 @@ import { Tenant } from "src/tenants/tenant.entity";
 import { Job } from "src/jobs/job.entity";
 import { Passenger } from "src/passengers/entities/passenger.entity";
 
+export enum ExpenseApprovalStatus {
+    Approved = "approved",
+    Pending = "pending",
+    Rejected = "rejected"
+}
+
 @Entity("expenses")
 export class Expense {
 
@@ -53,18 +59,18 @@ export class Expense {
 
     @Column({ default: 0 })
     amount: number
+    
+    @Column({ default: "pending" })
+    tenantApprovalStatus: ExpenseApprovalStatus
 
-    @Column({ default: false })
-    approvedByTenant: boolean
+    @Column({ default: "pending" })
+    adminApprovalStatus: ExpenseApprovalStatus
 
-    @Column({ default: false })
-    approvedByAdmin: boolean
+    @Column({ default: "pending" })
+    directorApprovalStatus: ExpenseApprovalStatus
 
-    @Column({ default: false })
-    approvedByDirector: boolean
-
-    @Column({ default: false })
-    approvedByManagingDirector: boolean
+    @Column({ default: "pending" })
+    managerApprovalStatus: ExpenseApprovalStatus
 
     @Column({ default: false })
     deleted: boolean

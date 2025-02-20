@@ -12,9 +12,6 @@ import { AddressDTO } from "src/global/addresses/address.dto";
 
 export class CreateUserDTO {
 
-    @IsNumber()
-    tenantId: number
-
     @IsString()
     firstName: string
 
@@ -43,12 +40,6 @@ export class CreateUserDTO {
     @ArrayNotEmpty()
     permissions: UserPermission[]
 
-    // @IsEnum(UserRole, { 
-    //     message: "role must be one of the following: admin, director, managing_director" 
-    // })
-    // role: UserRole
-
-    
     @IsString()
     @IsOptional()
     imageUrl?: string

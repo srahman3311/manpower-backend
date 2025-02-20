@@ -33,6 +33,7 @@ export class Company {
     @Column({ unique: true })
     name: string
 
+    // categories will be like construction and others
     @Column({ nullable: true })
     category: string
 

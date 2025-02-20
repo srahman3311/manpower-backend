@@ -19,7 +19,8 @@ export enum UserRole {
     Tenant = "tenant",
     Admin = "admin",
     Director = "director",
-    ManagingDirector = "managing_director"
+    Manager = "manager",
+    Basic = "basic"
 }
 
 export enum UserPermission {

@@ -3,9 +3,6 @@ import { VisaType } from "../job.entity";
 
 export class CreateJobDTO {
 
-    @IsNumber()
-    tenantId: number
-
     @IsString()
     name: string;
 

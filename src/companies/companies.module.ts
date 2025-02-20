@@ -7,7 +7,7 @@ import { CompanyController } from "./companies.controller";
 import { AddressModule } from "src/global/addresses/addresses.module";
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Company]), AuthModule, AddressModule],
+    imports: [TypeOrmModule.forFeature([Company]), AddressModule],
     controllers: [CompanyController],
     providers: [CompanyService]
 })

@@ -7,9 +7,6 @@ import {
 
 export class CreateRevenueDTO {
 
-    @IsNumber()
-    tenantId: number
-
     @IsOptional()
     @IsNumber()
     jobId?: number

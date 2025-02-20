@@ -6,6 +6,7 @@ import { QueryDTO, ParamDTO } from "src/global/dto/param-query.dto";
 import { CreateAgentDTO } from "./dto/create-agent.dto";
 import { AddressService } from "src/global/addresses/addresses.service";
 import { Tenant } from "src/tenants/tenant.entity";
+import { JwtPayload } from "src/global/types/JwtPayload";
 
 @Injectable()
 export class AgentService {
@@ -26,7 +27,7 @@ export class AgentService {
         return agent;
     }
 
-    async getAgents(query: QueryDTO): Promise<{ agents: Agent[], total: number }> {
+    async getAgents(query: QueryDTO, ctx: JwtPayload): Promise<{ agents: Agent[], total: number }> {
     
         const { 
             searchText = "", 
@@ -44,7 +45,7 @@ export class AgentService {
                                     agent.email LIKE :searchText OR 
                                     agent.phone LIKE :searchText
 
-                                ) AND agent.deleted = false`, 
+                                ) AND agent.deleted = false AND agent.tenantId = ${ctx.tenantId}`, 
                                 {
                                     searchText: `%${searchText}%`
                                 }
@@ -58,10 +59,9 @@ export class AgentService {
     
     }
 
-    async createAgent(createAgentDto: CreateAgentDTO): Promise<Agent> {
+    async createAgent(tenantId: number, createAgentDto: CreateAgentDTO): Promise<Agent> {
 
         const { 
-            tenantId,
             firstName,
             lastName,
             email,

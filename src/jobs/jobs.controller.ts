@@ -3,6 +3,8 @@ import { JobService } from "./jobs.service"
 import { CreateJobDTO } from "./dto/create-job.dto";
 import { ParamDTO, QueryDTO } from "../global/dto/param-query.dto";
 import { Job } from "./job.entity";
+import { RequestContext } from "src/global/decorators/RequestContext.decorator";
+import { JwtPayload } from "src/global/types/JwtPayload";
 
 @Controller("api/jobs")
 
@@ -17,14 +19,20 @@ export class JobController {
     }
 
     @Get("")
-    getJobs(@Query() query: QueryDTO): Promise<{jobs: Job[], total: number }> {
-        return this.jobService.getJobs(query)
+    getJobs(
+        @Query() query: QueryDTO,
+        @RequestContext() ctx: JwtPayload
+    ): Promise<{jobs: Job[], total: number }> {
+        return this.jobService.getJobs(query, ctx)
     }
 
     @Post("create")
-    createJob(@Body() createJobDto: CreateJobDTO): Promise<Job> {
+    createJob(
+        @Body() createJobDto: CreateJobDTO,
+        @RequestContext() ctx: JwtPayload
+    ): Promise<Job> {
         console.log(createJobDto)
-        return this.jobService.createJob(createJobDto);
+        return this.jobService.createJob(ctx.tenantId, createJobDto);
     }
 
     @Patch(":id/edit")

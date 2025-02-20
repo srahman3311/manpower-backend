@@ -1,7 +1,6 @@
 import { 
     Injectable, 
-    NotFoundException, 
-    BadRequestException,  
+    NotFoundException
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository} from "typeorm";
@@ -10,8 +9,8 @@ import { Job } from "src/jobs/job.entity";
 import { Passenger } from "src/passengers/entities/passenger.entity";
 import { CreateExpenseDTO } from "./dto/create-expense.dto";
 import { QueryDTO } from "src/global/dto/param-query.dto";
-import { ParamDTO } from "src/global/dto/param-query.dto";
 import { Expense } from "./expense.entity";
+import { JwtPayload } from "src/global/types/JwtPayload";
 
 @Injectable()
 
@@ -28,7 +27,7 @@ export class ExpenseService {
         });
     }
 
-    async getExpenses(query: QueryDTO): Promise<{ expenses: Expense[], total: number }> {
+    async getExpenses(query: QueryDTO, ctx: JwtPayload): Promise<{ expenses: Expense[], total: number }> {
 
         const { 
             searchText = "", 
@@ -42,7 +41,7 @@ export class ExpenseService {
                                 `(
                                     expense.name LIKE :searchText OR 
                                     expense.description LIKE :searchText
-                                ) AND expense.deleted = false`, 
+                                ) AND expense.deleted = false AND expense.tenantId = ${ctx.tenantId}`, 
                                 {
                                     searchText: `%${searchText}%`
                                 }
@@ -59,10 +58,9 @@ export class ExpenseService {
 
     }
 
-    async createExpense(createExpenseDto: CreateExpenseDTO): Promise<Expense> {
+    async createExpense(tenantId: number, createExpenseDto: CreateExpenseDTO): Promise<Expense> {
 
         const { 
-            tenantId,
             name,
             description,
             amount,
@@ -100,9 +98,6 @@ export class ExpenseService {
             name,
             description,
             amount
-            // ...createExpenseDto,
-            // job: jobId ? { id: jobId } as Job : undefined,
-            // passenger: passengerId ? { id: passengerId } as Passenger : undefined,
         };
 
         if(expense.job && !jobId) {
@@ -112,20 +107,46 @@ export class ExpenseService {
         if(expense.passenger && !passengerId) {
             expense.passenger = null
         }
+
+        await this.expenseRepository.save(expense);
         
         const result = await this.expenseRepository.update(
             { id },
             fieldsToUpdate
-        );
+        )
+        console.log({ result })
 
         if(result.affected === 0) {
             throw new NotFoundException("Expense Not Found")
         }
-
-        await this.expenseRepository.save(expense);
     
         return this.expenseRepository.findOne({ where: { id } });
 
+    }
+
+    async toggleApprovalStatus(expenseId: number, ctx: JwtPayload) {
+
+        const expense = await this.getExpenseById(expenseId);
+
+        if(!expense) throw new NotFoundException("Expense Not Found");
+
+        const role = ctx.roles[0] ? ctx.roles[0].name : "admin";
+        let statusKey = role + "ApprovalStatus";
+        
+        let status = (expense as any)[statusKey];
+        if(status === "approved") {
+            status = "rejected"
+        } else {
+            status = "approved"
+        }
+
+        (expense as any)[statusKey] = status;
+
+        await this.expenseRepository.save(expense);
+
+        return await this.getExpenseById(expenseId);
+
+        
     }
 
     async deleteExpense(id?: string): Promise<void> {

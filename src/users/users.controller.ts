@@ -5,7 +5,6 @@ import {
     Post, 
     Patch, 
     Body,
-    UseGuards, 
     Query,
     Param,
     Delete
@@ -14,8 +13,10 @@ import { Request } from "express";
 import { UserService } from "./users.service";
 import { CreateUserDTO } from "./dto/create-user.dto";
 import { User } from "./entities/user.entity";
-import { AuthGuard } from "src/auth/auth.guard";
 import { ParamDTO, QueryDTO } from "src/global/dto/param-query.dto";
+import { RequestContext } from "src/global/decorators/RequestContext.decorator";
+import { RolesAuth } from "src/global/decorators/RolesAuth.decorator";
+import { JwtPayload } from "src/global/types/JwtPayload";
 
 @Controller("api/users")
 
@@ -23,27 +24,32 @@ export class UserController {
 
     constructor(private readonly userService: UserService) {}
 
-    @UseGuards(AuthGuard)
     @Get("me")
     getAuthUser(@Req() request: Request) {
         const id = (request as any).user.sub;
         return this.userService.getUserById(id)
     }
-
-    // @UseGuards(AuthGuard)
+   
     @Get("")
-    getUsers(@Query() queryDto: QueryDTO): Promise<{ users: User[], total: number }> {
-        return this.userService.getUsers(queryDto)
+    @RolesAuth(["admin", "director", "tenant"])
+    getUsers(
+        @Query() queryDto: QueryDTO, 
+        @RequestContext() ctx: JwtPayload
+    ): Promise<{ users: User[], total: number }> {
+        return this.userService.getUsers(queryDto, ctx)
     }
 
-    // @UseGuards(AuthGuard)
     @Post("create")
-    createUser(@Body() createUserDto: CreateUserDTO): Promise<User> {
-        return this.userService.createUser(createUserDto);
+    @RolesAuth(["admin", "director", "tenant"])
+    createUser(
+        @Body() createUserDto: CreateUserDTO,
+        @RequestContext() ctx: JwtPayload
+    ): Promise<User> {
+        return this.userService.createUser(ctx.tenantId, createUserDto);
     }
 
-    // @UseGuards(AuthGuard)
     @Patch(":id/edit")
+    @RolesAuth(["admin", "director", "tenant"])
     editUser(
         @Param() paramDto: ParamDTO, 
         @Body() createUserDto: CreateUserDTO
@@ -54,8 +60,8 @@ export class UserController {
         })
     }
 
-    @UseGuards(AuthGuard)
     @Delete(":id/delete")
+    @RolesAuth(["admin", "director", "tenant"])
     deleteUser(@Param() paramDto: ParamDTO): Promise<void> {
         return this.userService.deleteUser(paramDto.id)
     }

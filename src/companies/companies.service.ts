@@ -8,6 +8,7 @@ import { QueryDTO } from "src/global/dto/param-query.dto";
 import { ParamDTO } from "src/global/dto/param-query.dto";
 import { AddressService } from "src/global/addresses/addresses.service";
 import { Tenant } from "src/tenants/tenant.entity";
+import { JwtPayload } from "src/global/types/JwtPayload";
 
 @Injectable()
 
@@ -21,12 +22,12 @@ export class CompanyService {
     getCompanyById(id: number): Promise<Company | null> {
         const company = this.companyRepository.findOne({ 
             where: { id },
-            relations: ["address", "tenants"]  
+            relations: ["address", "tenant"]  
         });
         return company;
     }
 
-    async getCompanies(query: QueryDTO): Promise<{ companies: Company[], total: number }> {
+    async getCompanies(query: QueryDTO, ctx: JwtPayload): Promise<{ companies: Company[], total: number }> {
     
         const { 
             searchText = "", 
@@ -43,11 +44,13 @@ export class CompanyService {
                                     company.phone LIKE :searchText OR 
                                     company.address LIKE :searchText 
 
-                                ) AND deleted = false`, 
+                                ) AND company.deleted = false AND company.tenantId = ${ctx.tenantId}`, 
                                 {
                                     searchText: `%${searchText}%`
                                 }
                             )
+                            .leftJoinAndSelect("company.tenant", "tenant")
+                            .leftJoinAndSelect("company.address", "address")
                             .orderBy("company.createdAt", "DESC")
                             .skip(parseInt(skip))
                             .take(parseInt(limit))
@@ -57,10 +60,8 @@ export class CompanyService {
     
     }
 
-    async createCompany(createCompanyDto: CreateCompanyDTO): Promise<Company> {
-        const { 
-            tenantId
-        } = createCompanyDto;
+    async createCompany(tenantId: number, createCompanyDto: CreateCompanyDTO): Promise<Company> {
+     
         const address = await this.addressService.createAddress(createCompanyDto.address);
         const company = this.companyRepository.create({
             ...createCompanyDto,

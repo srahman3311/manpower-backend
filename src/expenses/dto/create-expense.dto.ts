@@ -2,13 +2,11 @@ import {
     IsString, 
     IsNumber,
     IsOptional, 
-    IsBoolean
+    IsEnum
 } from "class-validator";
+import { ExpenseApprovalStatus } from "../expense.entity";
 
 export class CreateExpenseDTO {
-
-    @IsNumber()
-    tenantId: number
 
     @IsOptional()
     @IsNumber()
@@ -29,19 +27,8 @@ export class CreateExpenseDTO {
     amount: number
 
     @IsOptional()
-    @IsBoolean()
-    approvedByTenant?: boolean
+    @IsEnum(ExpenseApprovalStatus, { message: 'approval status must be one of following values: approved and rejected' })
+    approvalStatus?: ExpenseApprovalStatus
 
-    @IsOptional()
-    @IsBoolean()
-    approvedByAdmin?: boolean
-
-    @IsOptional()
-    @IsBoolean()
-    approvedByDirector?: boolean
-
-    @IsOptional()
-    @IsBoolean()
-    approvedByManagingDirector?: boolean
 
 }
