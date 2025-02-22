@@ -1,7 +1,6 @@
 import { 
     Injectable, 
-    NotFoundException, 
-    BadRequestException,  
+    NotFoundException
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository} from "typeorm";
@@ -10,7 +9,6 @@ import { Job } from "src/jobs/job.entity";
 import { Passenger } from "src/passengers/entities/passenger.entity";
 import { CreateRevenueDTO } from "./dto/create-revenue.dto";
 import { QueryDTO } from "src/global/dto/param-query.dto";
-import { ParamDTO } from "src/global/dto/param-query.dto";
 import { Revenue } from "./revenue.entity";
 import { JwtPayload } from "src/global/types/JwtPayload";
 
@@ -93,18 +91,23 @@ export class RevenueService {
             passengerId 
         } = createRevenueDto;
 
-        console.log(createRevenueDto)
-
         const revenue = await this.getRevenueById(id);
         if(!revenue) throw new NotFoundException("Revenue Not Found");
+        
+        revenue.name = name;
+        revenue.amount = amount;
 
-        let fieldsToUpdate: Partial<Revenue> = { 
-            name,
-            description,
-            amount
-        };
+        if(description) {
+            revenue.description = description;
+        }
+        
+        if(jobId) {
+            revenue.job = { id: jobId } as Job;
+        }
 
-        console.log(fieldsToUpdate)
+        if(passengerId) {
+            revenue.passenger = { id: passengerId } as Passenger;
+        }
 
         if(revenue.job && !jobId) {
             revenue.job = null
@@ -113,19 +116,9 @@ export class RevenueService {
         if(revenue.passenger && !passengerId) {
             revenue.passenger = null
         }
-        
-        const result = await this.revenueRepository.update(
-            { id },
-            fieldsToUpdate
-        );
-
-        if(result.affected === 0) {
-            throw new NotFoundException("Revenue Not Found")
-        }
 
         await this.revenueRepository.save(revenue);
-    
-        return this.revenueRepository.findOne({ where: { id } });
+        return await this.getRevenueById(id);
 
     }
 

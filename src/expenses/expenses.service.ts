@@ -94,11 +94,20 @@ export class ExpenseService {
         const expense = await this.getExpenseById(id);
         if(!expense) throw new NotFoundException("Expense Not Found");
 
-        let fieldsToUpdate: Partial<Expense> = { 
-            name,
-            description,
-            amount
-        };
+        expense.name = name;
+        expense.amount = amount;
+
+        if(description) {
+            expense.description = description;
+        }
+
+        if(jobId) {
+            expense.job = { id: jobId } as Job;
+        }
+
+        if(passengerId) {
+            expense.passenger = { id: passengerId } as Passenger;
+        }
 
         if(expense.job && !jobId) {
             expense.job = null
@@ -109,18 +118,7 @@ export class ExpenseService {
         }
 
         await this.expenseRepository.save(expense);
-        
-        const result = await this.expenseRepository.update(
-            { id },
-            fieldsToUpdate
-        )
-        console.log({ result })
-
-        if(result.affected === 0) {
-            throw new NotFoundException("Expense Not Found")
-        }
-    
-        return this.expenseRepository.findOne({ where: { id } });
+        return await this.getExpenseById(id);
 
     }
 

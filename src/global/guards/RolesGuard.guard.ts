@@ -31,7 +31,6 @@ export class RolesGuard implements CanActivate {
         if (isPublic) return true; 
 
         const token = this.extractTokenFromHeader(request);
-        console.log(token);
         if(!token) throw new UnauthorizedException();
 
         let payload;

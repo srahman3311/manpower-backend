@@ -5,7 +5,6 @@ import {
     UpdateDateColumn,
     Column,
     ManyToOne,
-    ManyToMany,
     JoinColumn
 } from "typeorm";
 import { Tenant } from "src/tenants/tenant.entity";
