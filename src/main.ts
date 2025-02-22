@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { HttpExceptionFilter } from './global/filters/HttpException.filter';
 
 async function bootstrap() {
 
@@ -13,6 +14,8 @@ async function bootstrap() {
       forbidNonWhitelisted: true // Throw error for extra fields
     })
   )
+
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   app.enableCors({
     origin: ['http://localhost:5173', "https://manpower.nexoqod.com"],
