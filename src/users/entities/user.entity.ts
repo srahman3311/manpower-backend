@@ -104,6 +104,9 @@ export class User {
     @Column({ nullable: true })
     imageUrl: string
 
+    @Column({ default: 0 })
+    balance: number
+
     @Column({ default: false })
     deleted: boolean
 

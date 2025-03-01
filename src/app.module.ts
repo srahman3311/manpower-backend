@@ -29,8 +29,7 @@ import { RolesGuard } from './global/guards/RolesGuard.guard';
         password: configService.get<string>("DATABASE_PASSWORD"),
         database: configService.get<string>("DATABASE_NAME"),
         autoLoadEntities: true,
-        synchronize: configService.get<boolean>("TYPEORM_SYNCHRONIZE"),
-        migrations: [__dirname + "/migrations/**/*{.ts, .js}"]
+        synchronize: false
       })
     }),
     AuthModule,
