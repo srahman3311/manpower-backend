@@ -81,12 +81,12 @@ export class Passenger {
     @JoinColumn({ name: "addressId" }) 
     address: Address
 
-    @Column()
+    @Column({ nullable: true })
     jobId: number
 
-    @ManyToOne(() => Job) 
+    @ManyToOne(() => Job, { nullable: true }) 
     @JoinColumn({ name: "jobId" }) 
-    job: Job
+    job: Job | null
 
     @Column()
     agentId: number
@@ -108,6 +108,21 @@ export class Passenger {
     @OneToOne(() => Medical) 
     @JoinColumn({ name: "medicalId" }) 
     medical: Medical
+
+    @Column({ nullable: true })
+    enjazNumber: string
+
+    @Column({ nullable: true })
+    visaNumber: string
+
+    @Column({ nullable: true })
+    idNumber: string
+
+    @Column({ default: 0 })
+    cost: number
+
+    @Column({ default: 0 })
+    sale: number
 
     @Column({ default: false })
     deleted: boolean

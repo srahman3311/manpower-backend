@@ -9,7 +9,6 @@ import { QueryDTO, ParamDTO } from "src/global/dto/param-query.dto";
 import { MedicalDTO } from "./dto/medical.dto";
 import { AddressService } from "src/global/addresses/addresses.service";
 import { PassportDTO } from "./dto/passport.dto";
-import { Tenant } from "src/tenants/tenant.entity";
 import { JwtPayload } from "src/global/types/JwtPayload";
 
 @Injectable()
@@ -43,6 +42,7 @@ export class PassengerService {
 
         const [passengers, total] = await this.passengerRepository
                             .createQueryBuilder("passenger")
+                            .leftJoinAndSelect("passenger.tenant", "tenant")
                             .leftJoinAndSelect("passenger.address", "address")
                             .leftJoinAndSelect("passenger.job", "job")
                             .leftJoinAndSelect("passenger.agent", "agent")
@@ -80,12 +80,11 @@ export class PassengerService {
 
         const passenger = this.passengerRepository.create({
             ...createPassengerDto,
+            tenantId,
             email: createPassengerDto.email ?? null,
-            tenant: { id: tenantId } as Tenant,
             address,
             medical,
-            passport,
-            tenantId: undefined
+            passport
         });
         
         return this.passengerRepository.save(passenger);
@@ -131,7 +130,7 @@ export class PassengerService {
     async editPassenger(passengerId: string, requestBody: CreatePassengerDTO): Promise<Passenger | null> {
 
         const id = parseInt(passengerId);
-        const { birthDate } = requestBody;
+        const { birthDate, jobId } = requestBody;
 
         const passenger = await this.getPassengerById(id);
         if(!passenger) throw new NotFoundException("Passenger Not Found")
@@ -165,7 +164,12 @@ export class PassengerService {
         if(result.affected === 0) {
             throw new NotFoundException("Passenger Not Found")
         }
-    
+
+        if(passenger.job && !jobId) {
+            passenger.job = null;
+            await this.passengerRepository.save(passenger);
+        }
+
         return this.passengerRepository.findOne({ where: { id } });
 
     }

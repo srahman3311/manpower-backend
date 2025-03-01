@@ -2,9 +2,17 @@ import * as dotenv from 'dotenv';
 // Load environment variables from .env file
 dotenv.config();
 import { DataSource } from 'typeorm';
+import { Passenger } from './passengers/entities/passenger.entity';
 import { User } from './users/entities/user.entity';
+import { Job } from './jobs/job.entity';
+import { Medical } from './passengers/entities/medical.entity';
+import { Passport } from './passengers/entities/passport.entity';
+import { Expense } from './expenses/expense.entity';
+import { Revenue } from './revenues/revenue.entity';
+import { Agent } from './agents/agent.entity';
 import { Tenant } from './tenants/tenant.entity';
 import { Address } from './global/addresses/address.entity';
+import { Company } from './companies/company.entity';
 import { Role } from './users/entities/role.entity';
 import { Permission } from './users/entities/permission.entity';
 
@@ -22,6 +30,20 @@ export const AppDataSource = new DataSource({
   username: process.env.DATABASE_USERNAME,
   password: process.env.DATABASE_PASSWORD,
   database: process.env.DATABASE_NAME,
-  entities: [User, Tenant, Address, Role, Permission],
+  entities: [
+    User, 
+    Passenger, 
+    Tenant, 
+    Address, 
+    Agent, 
+    Job, 
+    Medical, 
+    Passport, 
+    Company,
+    Expense,
+    Revenue,
+    Role,
+    Permission
+  ],
   migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
 });

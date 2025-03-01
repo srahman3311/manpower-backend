@@ -11,6 +11,7 @@ export class CreatePassengerDTO {
     @IsString()
     phone: string
 
+    @IsOptional()
     @IsNumber()
     jobId: number
 
@@ -62,6 +63,26 @@ export class CreatePassengerDTO {
 
     @IsOptional()
     medical: MedicalDTO
+
+    @IsOptional()
+    @IsString()
+    enjazNumber: string
+
+    @IsOptional()
+    @IsString()
+    visaNumber: string
+
+    @IsOptional()
+    @IsString()
+    idNumber: string
+
+    @IsOptional()
+    @IsNumber()
+    cost: number
+
+    @IsOptional()
+    @IsNumber()
+    sale: number
 
     @IsOptional()
     address: AddressDTO
