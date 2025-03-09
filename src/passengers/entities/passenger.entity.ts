@@ -15,6 +15,11 @@ import { Passport } from "./passport.entity";
 import { Medical } from "./medical.entity";
 import { Tenant } from "src/tenants/tenant.entity";
 
+export enum PassengerStatus {
+    Processing = "processing",
+    Completed = "completed"
+}
+
 @Entity("passengers")
 
 export class Passenger {
@@ -116,6 +121,12 @@ export class Passenger {
     visaNumber: string
 
     @Column({ nullable: true })
+    visaIssueDate: Date
+
+    @Column({ nullable: true })
+    visaExpiryDate: Date
+
+    @Column({ nullable: true })
     idNumber: string
 
     @Column({ default: 0 })
@@ -123,6 +134,9 @@ export class Passenger {
 
     @Column({ default: 0 })
     sale: number
+
+    @Column({ default: "processing" })
+    status: string
 
     @Column({ default: false })
     deleted: boolean

@@ -20,6 +20,15 @@ export class PassengerController {
         return this.passengerService.getPassengers(query, ctx);
     }
 
+    @Get("urgent")
+    getUrgentPassengers(
+        @Query() query: QueryDTO,
+        @RequestContext() ctx: JwtPayload
+    ): Promise<{ passengers: Passenger[], total: number }> {
+        return this.passengerService.getUrgentPassengers(query, ctx);
+    }
+
+
     @Post("create")
     createPassenger(
         @Body() createPassengerDto: CreatePassengerDTO,

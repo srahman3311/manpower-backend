@@ -6,6 +6,11 @@ import {
     UpdateDateColumn
 } from "typeorm";
 
+export enum MedicalStatus {
+    Processing = "processing",
+    Completed = "completed"
+}
+
 @Entity("medicals")
 
 export class Medical {
@@ -25,7 +30,7 @@ export class Medical {
     @Column({ nullable: true })
     expiryDate: Date
 
-    @Column({ nullable: true })
+    @Column({ default: "processing" })
     status: string
 
     @Column({ default: false })

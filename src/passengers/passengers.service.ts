@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Brackets, Repository } from "typeorm";
 import { Passenger } from "./entities/passenger.entity";
 import { Medical } from "./entities/medical.entity";
 import { Passport } from "./entities/passport.entity";
@@ -52,6 +52,7 @@ export class PassengerService {
                                 `(
                                     passenger.name LIKE :searchText OR 
                                     passenger.phone LIKE :searchText OR
+                                    passport.number LIKE :searchText OR
                                     passenger.fatherName LIKE :searchText
 
                                 ) AND passenger.deleted = false AND passenger.tenantId = ${ctx.tenantId}`, 
@@ -61,6 +62,40 @@ export class PassengerService {
                             )
                             .orderBy("passenger.createdAt", "DESC")
                             .skip(parseInt(skip))
+                            .take(parseInt(limit))
+                            .getManyAndCount()
+
+        return { passengers, total };
+    
+    }
+
+    
+    async getUrgentPassengers(query: QueryDTO, ctx: JwtPayload): Promise<{ passengers: Passenger[], total: number }> {
+
+        const { 
+            limit = "100000" 
+        } = query;
+
+        const now = new Date();
+        const targetDate = new Date();
+        targetDate.setDate(now.getDate() + 30);
+
+        const [passengers, total] = await this.passengerRepository
+                            .createQueryBuilder("passenger")
+                            .leftJoinAndSelect("passenger.tenant", "tenant")
+                            .leftJoinAndSelect("passenger.address", "address")
+                            .leftJoinAndSelect("passenger.job", "job")
+                            .leftJoinAndSelect("passenger.agent", "agent")
+                            .leftJoinAndSelect("passenger.medical", "medical")
+                            .leftJoinAndSelect("passenger.passport", "passport")
+                            .where("passenger.status = :status", { status: "processing" })
+                            .andWhere((new Brackets((qb) => {
+                                qb.where("passenger.visaExpiryDate IS NOT NULL AND passenger.visaExpiryDate < :targetDate", { targetDate })
+                                .orWhere("passport.expiryDate IS NOT NULL AND passport.expiryDate < :targetDate", { targetDate })
+                                .orWhere("medical.expiryDate IS NOT NULL AND medical.expiryDate < :targetDate", { targetDate })
+                                
+                            })))
+                            .orderBy("passenger.createdAt", "ASC")
                             .take(parseInt(limit))
                             .getManyAndCount()
 
@@ -130,7 +165,7 @@ export class PassengerService {
     async editPassenger(passengerId: string, requestBody: CreatePassengerDTO): Promise<Passenger | null> {
 
         const id = parseInt(passengerId);
-        const { birthDate, jobId } = requestBody;
+        const { birthDate, visaExpiryDate, visaIssueDate, jobId } = requestBody;
 
         const passenger = await this.getPassengerById(id);
         if(!passenger) throw new NotFoundException("Passenger Not Found")
@@ -138,6 +173,8 @@ export class PassengerService {
         let fieldsToUpdate: Partial<Passenger> = { 
             ...requestBody,
             birthDate: birthDate ? new Date(birthDate) : undefined,
+            visaExpiryDate: visaExpiryDate ? new Date(visaExpiryDate) : undefined,
+            visaIssueDate: visaIssueDate ? new Date(visaIssueDate) : undefined,
             address: undefined,
             passport: undefined,
             medical: undefined

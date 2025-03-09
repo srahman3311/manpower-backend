@@ -1,4 +1,5 @@
-import { IsString, IsOptional } from "class-validator";
+import { IsString, IsOptional, IsEnum } from "class-validator";
+import { MedicalStatus } from "../entities/medical.entity";
 
 export class MedicalDTO {
 
@@ -11,7 +12,7 @@ export class MedicalDTO {
     expiryDate: string
 
     @IsOptional()
-    @IsString()
-    status: string
+    @IsEnum(MedicalStatus, { message: "medical status must be of one of following - processing & completed"})
+    status: MedicalStatus
 
 }
