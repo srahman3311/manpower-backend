@@ -11,6 +11,7 @@ import { UserModule } from './users/users.module';
 import { PassengerModule } from './passengers/passengers.module';
 import { ExpenseModule } from './expenses/expenses.module';
 import { RevenueModule } from './revenues/revenues.module';
+import { AccountModule } from './accounts/accounts.module';
 import { RolesGuard } from './global/guards/RolesGuard.guard';
 
 @Module({
@@ -40,7 +41,8 @@ import { RolesGuard } from './global/guards/RolesGuard.guard';
     UserModule,
     PassengerModule,
     ExpenseModule,
-    RevenueModule
+    RevenueModule,
+    AccountModule
   ],
   providers: [
     {
