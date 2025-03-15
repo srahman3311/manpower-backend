@@ -76,18 +76,19 @@ export class PassengerService {
     
     }
 
-    async createPassengerInvoice(tenantId: number, body: { passengerIds: number[] }) {
+    async createPassengerInvoice(tenantId: number, body: { passengerIds: number[] }): Promise<string> {
 
         const tenant = await this.tenantService.getTenantById(tenantId);
         if(!tenant) throw new BadRequestException("Something went wrong");
 
-        const outputPath = join(__dirname, "../../public", "invoice.pdf");
+        // Remove old invoice file.
+        const unlinkFile = `invoice${tenant.id}${tenant.passengerInvoiceCount}.pdf`;
+        const unlinkfilePath = join(__dirname, "../../public", unlinkFile);
 
-        if(fs.existsSync(outputPath)) {
-            fs.unlink(outputPath, (error) => {
+        if(fs.existsSync(unlinkfilePath)) {
+            fs.unlink(unlinkfilePath, (error) => {
                 if(error) {
                     console.log(error);
-                    throw new NotFoundException("Something went wrong");
                 }
             })
         }
@@ -121,6 +122,8 @@ export class PassengerService {
         };
 
         const formattedDate = date.toLocaleDateString("en-GB", options);
+        const fileName = `invoice${tenant.id}${tenant.passengerInvoiceCount + 1}.pdf`
+        const outputPath = join(__dirname, "../../public", fileName);
 
         const html = await renderFile(
             join(__dirname, "../../views/passenger-invoice.ejs"),
@@ -153,6 +156,8 @@ export class PassengerService {
         )
 
         await browser.close();
+
+        return fileName;
 
     }
 

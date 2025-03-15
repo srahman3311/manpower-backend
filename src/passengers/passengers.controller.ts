@@ -50,10 +50,10 @@ export class PassengerController {
     async createPassengerInvoice(
         @Body() body: { passengerIds: number[] },
         @RequestContext() ctx: JwtPayload
-    ) {
-        await this.passengerService.createPassengerInvoice(ctx.tenantId, body);
+    ): Promise<{ url: string}> {
+        const fileName = await this.passengerService.createPassengerInvoice(ctx.tenantId, body);
         return {
-            url: `${process.env.PUBLIC_URL}/invoice.pdf`
+            url: `${process.env.PUBLIC_URL}/${fileName}`
         }
     }
 
