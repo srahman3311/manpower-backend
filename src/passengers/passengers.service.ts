@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import { join } from 'path';
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -78,7 +79,18 @@ export class PassengerService {
     async createPassengerInvoice(tenantId: number, body: { passengerIds: number[] }) {
 
         const tenant = await this.tenantService.getTenantById(tenantId);
-        if(!tenant) throw new BadRequestException("Something went wrong")
+        if(!tenant) throw new BadRequestException("Something went wrong");
+
+        const outputPath = join(__dirname, "../../public", "invoice.pdf");
+
+        if(fs.existsSync(outputPath)) {
+            fs.unlink(outputPath, (error) => {
+                if(error) {
+                    console.log(error);
+                    throw new NotFoundException("Something went wrong");
+                }
+            })
+        }
 
         const { passengerIds } = body;
 
@@ -126,7 +138,6 @@ export class PassengerService {
         const browser = await puppeteer.launch();
         const page = await browser.newPage();
         await page.setContent(html);
-        const outputPath = join(__dirname, "../../public", "invoice.pdf");
 
         await page.pdf({
             path: outputPath,
