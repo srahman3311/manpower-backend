@@ -1,13 +1,18 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { join } from 'path';
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Brackets, Repository } from "typeorm";
+import { Brackets, Repository, In } from "typeorm";
+import { renderFile } from 'ejs';
+import puppeteer from "puppeteer";
+import { toWords } from 'number-to-words';
 import { Passenger } from "./entities/passenger.entity";
 import { Medical } from "./entities/medical.entity";
 import { Passport } from "./entities/passport.entity";
 import { CreatePassengerDTO } from "./dto/create-passenger.dto";
-import { QueryDTO, ParamDTO } from "src/global/dto/param-query.dto";
+import { QueryDTO } from "src/global/dto/param-query.dto";
 import { MedicalDTO } from "./dto/medical.dto";
 import { AddressService } from "src/global/addresses/addresses.service";
+import { TenantService } from 'src/tenants/tenants.service';
 import { PassportDTO } from "./dto/passport.dto";
 import { JwtPayload } from "src/global/types/JwtPayload";
 
@@ -18,7 +23,8 @@ export class PassengerService {
         @InjectRepository(Passenger) private passengerRepository: Repository<Passenger>,
         @InjectRepository(Medical) private medicalRepository: Repository<Medical>,
         @InjectRepository(Passport) private passportRepository: Repository<Passport>,
-        private readonly addressService: AddressService
+        private readonly addressService: AddressService,
+        private readonly tenantService: TenantService
     ) {}
     
     getPassengerById(id: number): Promise<Passenger | null> {
@@ -67,6 +73,76 @@ export class PassengerService {
 
         return { passengers, total };
     
+    }
+
+    async createPassengerInvoice(tenantId: number, body: { passengerIds: number[] }) {
+
+        const tenant = await this.tenantService.getTenantById(tenantId);
+        if(!tenant) throw new BadRequestException("Something went wrong")
+
+        const { passengerIds } = body;
+
+        const passengerList = await this.passengerRepository.find({ 
+            where: { id: In(passengerIds)},
+            relations: ["tenant", "passport", "job", "agent"] 
+        });
+
+        const totalSale = passengerList.reduce((sum, currentPassenger) => {
+            return sum + currentPassenger.sale;
+        }, 0);
+        
+        const totalCost = passengerList.reduce((sum, currentPassenger) => {
+        return sum + currentPassenger.cost;
+        }, 0);
+
+        let invoiceNumber: number | string = tenant.passengerInvoiceCount + 1;
+        if(tenant.passengerInvoiceCount < 10) invoiceNumber = "00" + invoiceNumber 
+        if(tenant.passengerInvoiceCount >= 10 && tenant.passengerInvoiceCount < 100) invoiceNumber = "0" + invoiceNumber 
+        
+        const profit = totalSale - totalCost;
+        const amountinWords = toWords(totalSale);
+        const date = new Date();
+        const options: any = {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+        };
+
+        const formattedDate = date.toLocaleDateString("en-GB", options);
+
+        const html = await renderFile(
+            join(__dirname, "../../views/passenger-invoice.ejs"),
+            {
+                data: passengerList,
+                formattedDate,
+                uniqueId: "INV" + invoiceNumber,
+                profit,
+                amountinWords,
+                totalSale,
+                totalCost,
+            }
+        );
+
+        const browser = await puppeteer.launch();
+        const page = await browser.newPage();
+        await page.setContent(html);
+        const outputPath = join(__dirname, "../../public", "invoice.pdf");
+
+        await page.pdf({
+            path: outputPath,
+            format: "A4",
+            printBackground: true,
+            margin: { top: "2cm", bottom: "2cm", left: "1cm", right: "1cm" },
+            preferCSSPageSize: true,
+        });
+
+        await this.tenantService.updatePassengerInvoiceCount(
+            tenantId, 
+            tenant.passengerInvoiceCount + 1
+        )
+
+        await browser.close();
+
     }
 
     

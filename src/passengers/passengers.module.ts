@@ -6,11 +6,13 @@ import { Medical } from "./entities/medical.entity";
 import { Passport } from "./entities/passport.entity";
 import { PassengerService } from "./passengers.service";
 import { AddressModule } from "src/global/addresses/addresses.module";
+import { TenantModule } from "src/tenants/tenants.module";
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([Passenger, Medical, Passport]), 
-        AddressModule
+        AddressModule,
+        TenantModule
     ],
     controllers: [PassengerController],
     providers: [PassengerService]

@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, Patch, Delete, Query, Param } from "@nestjs/common";
+import { 
+    Body, 
+    Controller, 
+    Get, 
+    Post, 
+    Patch, 
+    Delete, 
+    Query, 
+    Param 
+} from "@nestjs/common";
 import { PassengerService } from "./passengers.service";
 import { Passenger } from "./entities/passenger.entity";
 import { CreatePassengerDTO } from "./dto/create-passenger.dto";
@@ -35,6 +44,17 @@ export class PassengerController {
         @RequestContext() ctx: JwtPayload
     ) {
         return this.passengerService.createPassenger(ctx.tenantId, createPassengerDto)
+    }
+
+    @Post("create-invoice")
+    async createPassengerInvoice(
+        @Body() body: { passengerIds: number[] },
+        @RequestContext() ctx: JwtPayload
+    ) {
+        await this.passengerService.createPassengerInvoice(ctx.tenantId, body);
+        return {
+            url: `${process.env.PUBLIC_URL}/invoice.pdf`
+        }
     }
 
     @Patch(":id/edit")

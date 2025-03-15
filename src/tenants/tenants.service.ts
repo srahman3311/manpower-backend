@@ -18,4 +18,28 @@ export class TenantService {
         return await this.tenantRepository.save(user);
     }
 
+    getTenantById(id: number): Promise<Tenant | null> {
+        const tenant = this.tenantRepository.findOne(
+            { where: { id } },
+        );
+        return tenant;
+    }
+
+    async updatePassengerInvoiceCount(id: number, count: number): Promise<void> {
+          
+        let fieldsToUpdate: Partial<Tenant> = { 
+            passengerInvoiceCount: count
+        };
+
+        try {
+            await this.tenantRepository.update(
+                { id },
+                fieldsToUpdate
+            );
+        } catch(error) {
+            console.log(error);
+        }
+    
+    }
+
 }

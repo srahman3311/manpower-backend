@@ -21,6 +21,9 @@ export class Tenant {
     @Column()
     name: string
 
+    @Column({ default: 0 })
+    passengerInvoiceCount: number
+
     @Column({ default: false })
     deleted: boolean
 
