@@ -26,6 +26,10 @@ export class CreateRevenueDTO {
     amount: number
 
     @IsOptional()
+    @IsNumber()
+    creditedToAccountId: number
+
+    @IsOptional()
     @IsBoolean()
     approvedByTenant?: boolean
 

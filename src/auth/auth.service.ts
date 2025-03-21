@@ -56,6 +56,7 @@ export class AuthService {
             roles: [UserRole.Tenant],
             permissions: [UserPermission.Read, UserPermission.Write, UserPermission.Delete],
             password,
+            balance: 0
         });
 
         if(!user) throw new UnauthorizedException();

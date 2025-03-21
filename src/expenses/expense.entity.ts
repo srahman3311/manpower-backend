@@ -8,8 +8,10 @@ import {
     JoinColumn
 } from "typeorm";
 import { Tenant } from "src/tenants/tenant.entity";
+import { User } from "src/users/entities/user.entity";
 import { Job } from "src/jobs/job.entity";
 import { Passenger } from "src/passengers/entities/passenger.entity";
+import { Account } from "src/accounts/account.entity";
 
 export enum ExpenseApprovalStatus {
     Approved = "approved",
@@ -55,6 +57,20 @@ export class Expense {
     @ManyToOne(() => Passenger, { nullable: true }) 
     @JoinColumn({ name: "passengerId" }) 
     passenger: Passenger | null
+
+    @Column({ nullable: true })
+    debitedFromAccountId: number
+
+    @ManyToOne(() => Account, { nullable: true }) 
+    @JoinColumn({ name: "debitedFromAccountId" }) 
+    debitedFromAccount: Account | null
+
+    @Column({ nullable: true })
+    userId: number
+
+    @ManyToOne(() => User, { nullable: true }) 
+    @JoinColumn({ name: "userId" }) 
+    user: User | null
 
     @Column({ default: 0 })
     amount: number

@@ -30,6 +30,10 @@ export class CreateUserDTO {
     @IsString()
     password: string
 
+    @IsOptional()
+    @IsNumber()
+    balance: number
+
     @IsArray()
     @IsEnum(UserRole, { each: true })
     @ArrayNotEmpty()

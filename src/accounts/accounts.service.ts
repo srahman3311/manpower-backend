@@ -65,14 +65,16 @@ export class AccountService {
         const { 
             id,
             name, 
-            bankName
+            bankName,
+            balance
         } = paramsBody;
 
         const parsedId = parseInt(id as string);
 
         let fieldsToUpdate: Partial<Account> = {
             name, 
-            bankName
+            bankName,
+            balance
         };
 
         const result = await this.accountRepository.update(
@@ -85,6 +87,20 @@ export class AccountService {
         }
 
         return this.accountRepository.findOne({ where: { id: parsedId } });
+            
+    }
+
+    async updateAccountBalance(id: number, amount: number): Promise<void> {
+    
+        const account = await this.getAccountById(id);
+        if(!account) throw new NotFoundException("Account doesn't exist");
+
+        const newBalance = account.balance + amount; 
+
+        await this.accountRepository.update(
+            { id },
+            { balance: newBalance }
+        );
             
     }
     

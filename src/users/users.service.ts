@@ -15,6 +15,7 @@ import { ParamDTO } from "src/global/dto/param-query.dto";
 import { hashPassword } from "../auth/utils/hash.util";
 import { AddressService } from "src/global/addresses/addresses.service";
 import { JwtPayload } from "src/global/types/JwtPayload";
+import { UserRole } from "./entities/user.entity";
 
 @Injectable()
 
@@ -72,7 +73,12 @@ export class UserService {
                             .take(parseInt(limit))
                             .getManyAndCount()
 
-        return { users, total };
+
+        const filteredUsers = users.filter(user => {
+            return user.roles.some(role => role.name !== UserRole.Tenant)
+        })
+
+        return { users: filteredUsers, total };
 
     }
 
@@ -129,10 +135,10 @@ export class UserService {
             email,
             roles,
             permissions,
-            password
+            password,
+            balance
         } = paramsBody;
-        console.log(paramsBody)
-
+        
         const parsedId = parseInt(id as string);
 
         const user = await this.getUserById(parsedId)
@@ -158,7 +164,8 @@ export class UserService {
             firstName,
             lastName,
             phone,
-            email
+            email,
+            balance
         };
 
         if(password) {
@@ -188,6 +195,27 @@ export class UserService {
 
         return this.userRepository.findOne({ where: { id: parsedId } });
         
+    }
+
+    async updateUserBalance(id: number, amount: number): Promise<void> {
+    
+        const user = await this.getUserById(id);
+
+        if(!user) throw new NotFoundException("User doesn't exist");
+
+        // If amount is a negative integer then user's balance is being deducted. It can be
+        // an expense or expense refuned or it can be a revenue or revenue adjusted
+        if(amount < 0 && Math.abs(amount) > user.balance) {
+            throw new BadRequestException("User balance is less than expense amount");
+        }
+
+        const newBalance = user.balance + amount; 
+
+        await this.userRepository.update(
+            { id },
+            { balance: newBalance }
+        );
+            
     }
 
     async deleteUser(id?: string): Promise<void> {

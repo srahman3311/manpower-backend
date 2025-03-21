@@ -34,20 +34,22 @@ export class RevenueController {
         @Body() createRevenueDto: CreateRevenueDTO,
         @RequestContext() ctx: JwtPayload
     ): Promise<Revenue> {
-        return this.revenueService.createRevenue(ctx.tenantId, createRevenueDto);
+        return this.revenueService.createRevenue(ctx, createRevenueDto);
     }
 
     @Patch(":id/edit")
     editRevenue(
         @Param() paramDto: ParamDTO, 
-        @Body() createRevenueDto: CreateRevenueDTO
+        @Body() createRevenueDto: CreateRevenueDTO,
+        @RequestContext() ctx: JwtPayload
     ): Promise<Revenue | null> {
         const { 
             name,
             description,
             amount,
             jobId, 
-            passengerId 
+            passengerId,
+            creditedToAccountId 
         } = createRevenueDto;
         return this.revenueService.editRevenue(
             parseInt(paramDto.id as string), 
@@ -56,8 +58,10 @@ export class RevenueController {
                 description,
                 amount,
                 jobId, 
-                passengerId 
-            }
+                passengerId,
+                creditedToAccountId 
+            },
+            ctx
         )
     }
 

@@ -11,19 +11,25 @@ import { CreateExpenseDTO } from "./dto/create-expense.dto";
 import { QueryDTO } from "src/global/dto/param-query.dto";
 import { Expense } from "./expense.entity";
 import { JwtPayload } from "src/global/types/JwtPayload";
+import { AccountService } from "src/accounts/accounts.service";
+import { UserService } from "src/users/users.service";
+import { Account } from "src/accounts/account.entity";
+import { User } from "src/users/entities/user.entity";
 
 @Injectable()
 
 export class ExpenseService {
 
     constructor(
-        @InjectRepository(Expense) private readonly expenseRepository: Repository<Expense>
+        @InjectRepository(Expense) private readonly expenseRepository: Repository<Expense>,
+        private readonly userService: UserService,
+        private readonly accountService: AccountService
     ) {}
 
     async getExpenseById(id: number): Promise<Expense | null> {
         return await this.expenseRepository.findOne({ 
             where: { id },
-            relations: ["tenant", "job", "passenger"]  
+            relations: ["tenant", "job", "passenger", "debitedFromAccount", "user"]  
         });
     }
 
@@ -49,6 +55,8 @@ export class ExpenseService {
                             .leftJoinAndSelect("expense.tenant", "tenant")
                             .leftJoinAndSelect("expense.job", "job")
                             .leftJoinAndSelect("expense.passenger", "passenger")
+                            .leftJoinAndSelect("expense.debitedFromAccount", "debitedFromAccount")
+                            .leftJoinAndSelect("expense.user", "user")
                             .orderBy("expense.createdAt", "DESC")
                             .skip(parseInt(skip))
                             .take(parseInt(limit))
@@ -58,20 +66,32 @@ export class ExpenseService {
 
     }
 
-    async createExpense(tenantId: number, createExpenseDto: CreateExpenseDTO): Promise<Expense> {
+    async createExpense(ctx: JwtPayload, createExpenseDto: CreateExpenseDTO): Promise<Expense> {
+
+        // sub is the logged in user id
+        const { sub, tenantId } = ctx;
 
         const { 
             name,
             description,
             amount,
             jobId, 
-            passengerId 
+            passengerId,
+            debitedFromAccountId 
         } = createExpenseDto;
+        
+        if(debitedFromAccountId) {
+            await this.accountService.updateAccountBalance(debitedFromAccountId, -amount)
+        } else {
+            await this.userService.updateUserBalance(sub, -amount)
+        }
 
         const expense = this.expenseRepository.create({
             tenant: { id: tenantId } as Tenant,
             job: jobId ? { id: jobId } as Job : undefined,
             passenger: passengerId ? { id: passengerId } as Passenger : undefined,
+            debitedFromAccount: debitedFromAccountId ? { id: debitedFromAccountId } as Account : undefined,
+            user: { id: sub } as User,
             name,
             description,
             amount
@@ -81,24 +101,98 @@ export class ExpenseService {
 
     }
 
-    async editExpense(id: number, createExpenseDto: Omit<CreateExpenseDTO, "tenantId">): Promise<Expense | null> {
+    async editExpense(
+        id: number, 
+        createExpenseDto: Omit<CreateExpenseDTO, "tenantId">,
+        ctx: JwtPayload
+    ): Promise<Expense | null> {
+
+        const { sub } = ctx;
 
         const { 
             name,
             description,
             amount,
             jobId, 
-            passengerId 
+            passengerId,
+            debitedFromAccountId
         } = createExpenseDto;
 
         const expense = await this.getExpenseById(id);
         if(!expense) throw new NotFoundException("Expense Not Found");
+
+        // Amount more than existing expense amount will be charged from user balance or account selected
+        let adjustableAmount = expense.amount - amount;
+
+        // User might be using the existing account or changing it or adding just now
+        if(debitedFromAccountId) {
+
+            // User is changing the account. Old account must be refunded and the new one charged.
+            if (
+                expense.debitedFromAccountId && 
+                expense.debitedFromAccountId !== debitedFromAccountId
+            ) {
+
+                await this.accountService.updateAccountBalance(expense.debitedFromAccountId, expense.amount);
+                await this.accountService.updateAccountBalance(debitedFromAccountId, -amount);
+
+            // User is keeping the existing account, just adjust the amount
+            } else if(expense.debitedFromAccountId) {
+                await this.accountService.updateAccountBalance(expense.debitedFromAccountId, adjustableAmount);
+
+            // User is adding account now. Charge the account and deduct the expense from user's account.    
+            } else {
+
+                await this.accountService.updateAccountBalance(debitedFromAccountId, -amount);
+
+                if(expense.userId) {
+                    await this.userService.updateUserBalance(expense.userId, expense.amount);
+                } 
+
+            }
+
+        // User is unselecting account or expense was charged from user's account or there was no user involved
+        } else {
+
+            // User is unselecting account and choosing to use user's balance instead
+            if(expense.debitedFromAccountId) {
+
+                await this.accountService.updateAccountBalance(expense.debitedFromAccountId, expense.amount);
+
+                if(expense.userId) {
+                    await this.userService.updateUserBalance(expense.userId, -expense.amount)
+                } else {
+                    await this.userService.updateUserBalance(sub, -amount)
+                }
+
+            // Just adjust the user's balance
+            } else if(expense.userId) {
+                await this.userService.updateUserBalance(expense.userId, adjustableAmount)
+            } 
+            // There was no user when expense was created, so, charge the logged in user's account
+            else {
+                await this.userService.updateUserBalance(sub, -amount)
+            }
+
+        }
 
         expense.name = name;
         expense.amount = amount;
 
         if(description) {
             expense.description = description;
+        }
+
+        if(!expense.user) {
+            expense.user = { id: sub } as User;
+        }
+
+        if(debitedFromAccountId) {
+            expense.debitedFromAccount = { id: debitedFromAccountId } as Account;
+        }
+
+        if(expense.debitedFromAccountId && !debitedFromAccountId) {
+            expense.debitedFromAccount = null;
         }
 
         if(jobId) {

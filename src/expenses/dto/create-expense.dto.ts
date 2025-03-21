@@ -23,6 +23,10 @@ export class CreateExpenseDTO {
     @IsString()
     description?: string
 
+    @IsOptional()
+    @IsNumber()
+    debitedFromAccountId: number
+
     @IsNumber()
     amount: number
 

@@ -35,20 +35,22 @@ export class ExpenseController {
         @Body() createExpenseDto: CreateExpenseDTO,
         @RequestContext() ctx: JwtPayload
     ): Promise<Expense> {
-        return this.expenseService.createExpense(ctx.tenantId, createExpenseDto);
+        return this.expenseService.createExpense(ctx, createExpenseDto);
     }
 
     @Patch(":id/edit")
     editExpense(
         @Param() paramDto: ParamDTO, 
-        @Body() createExpenseDto: CreateExpenseDTO
+        @Body() createExpenseDto: CreateExpenseDTO,
+        @RequestContext() ctx: JwtPayload
     ): Promise<Expense | null> {
         const { 
             name,
             description,
             amount,
             jobId, 
-            passengerId 
+            passengerId,
+            debitedFromAccountId
         } = createExpenseDto;
         return this.expenseService.editExpense(
             parseInt(paramDto.id as string), 
@@ -57,8 +59,10 @@ export class ExpenseController {
                 description,
                 amount,
                 jobId, 
-                passengerId 
-            }
+                passengerId,
+                debitedFromAccountId
+            },
+            ctx
         )
     }
     
