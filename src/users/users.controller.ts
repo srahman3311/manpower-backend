@@ -31,7 +31,7 @@ export class UserController {
     }
    
     @Get("")
-    @RolesAuth(["admin", "director", "tenant"])
+    // @RolesAuth(["admin", "director", "tenant"])
     getUsers(
         @Query() queryDto: QueryDTO, 
         @RequestContext() ctx: JwtPayload
@@ -40,7 +40,7 @@ export class UserController {
     }
 
     @Post("create")
-    @RolesAuth(["admin", "director", "tenant"])
+    // @RolesAuth(["admin", "director", "tenant"])
     createUser(
         @Body() createUserDto: CreateUserDTO,
         @RequestContext() ctx: JwtPayload
@@ -49,7 +49,7 @@ export class UserController {
     }
 
     @Patch(":id/edit")
-    @RolesAuth(["admin", "director", "tenant"])
+    // @RolesAuth(["admin", "director", "tenant"])
     editUser(
         @Param() paramDto: ParamDTO, 
         @Body() createUserDto: CreateUserDTO
@@ -61,7 +61,7 @@ export class UserController {
     }
 
     @Delete(":id/delete")
-    @RolesAuth(["admin", "director", "tenant"])
+    // @RolesAuth(["admin", "director", "tenant"])
     deleteUser(@Param() paramDto: ParamDTO): Promise<void> {
         return this.userService.deleteUser(paramDto.id)
     }
