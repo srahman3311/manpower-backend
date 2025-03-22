@@ -16,6 +16,7 @@ import { Company } from './companies/company.entity';
 import { Role } from './users/entities/role.entity';
 import { Permission } from './users/entities/permission.entity';
 import { Account } from './accounts/account.entity';
+import { Transaction } from './transactions/transaction.entity';
 
 // Make sure all the related entities are also included in the entities field.
 // For example if you want to run a migration (e.g. add a new column) on User
@@ -45,7 +46,8 @@ export const AppDataSource = new DataSource({
     Revenue,
     Role,
     Permission,
-    Account
+    Account,
+    Transaction
   ],
   migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
 });

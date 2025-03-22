@@ -173,23 +173,28 @@ export class PassengerService {
         targetDate.setDate(now.getDate() + 30);
 
         const [passengers, total] = await this.passengerRepository
-                            .createQueryBuilder("passenger")
-                            .leftJoinAndSelect("passenger.tenant", "tenant")
-                            .leftJoinAndSelect("passenger.address", "address")
-                            .leftJoinAndSelect("passenger.job", "job")
-                            .leftJoinAndSelect("passenger.agent", "agent")
-                            .leftJoinAndSelect("passenger.medical", "medical")
-                            .leftJoinAndSelect("passenger.passport", "passport")
-                            .where("passenger.status = :status", { status: "processing" })
-                            .andWhere((new Brackets((qb) => {
-                                qb.where("passenger.visaExpiryDate IS NOT NULL AND passenger.visaExpiryDate < :targetDate", { targetDate })
-                                .orWhere("passport.expiryDate IS NOT NULL AND passport.expiryDate < :targetDate", { targetDate })
-                                .orWhere("medical.expiryDate IS NOT NULL AND medical.expiryDate < :targetDate", { targetDate })
-                                
-                            })))
-                            .orderBy("passenger.createdAt", "ASC")
-                            .take(parseInt(limit))
-                            .getManyAndCount()
+                                    .createQueryBuilder('passenger')
+                                    .leftJoinAndSelect("passenger.tenant", "tenant")
+                                    .leftJoinAndSelect("passenger.address", "address")
+                                    .leftJoinAndSelect("passenger.job", "job")
+                                    .leftJoinAndSelect("passenger.agent", "agent")
+                                    .leftJoinAndSelect("passenger.medical", "medical")
+                                    .leftJoinAndSelect("passenger.passport", "passport")
+                                    .where(
+                                        `
+                                            passenger.deleted = false AND
+                                            passenger.status = 'processing' AND
+                                            passenger.tenantId = ${ctx.tenantId}
+                                        `
+                                    )
+                                    .andWhere((new Brackets((qb) => {
+                                        qb.where("passenger.visaExpiryDate IS NOT NULL AND passenger.visaExpiryDate < :targetDate", { targetDate })
+                                        .orWhere("passport.expiryDate IS NOT NULL AND passport.expiryDate < :targetDate", { targetDate })
+                                        .orWhere("medical.expiryDate IS NOT NULL AND medical.expiryDate < :targetDate", { targetDate })
+                                    })))
+                                    .orderBy("passenger.createdAt", "ASC")
+                                    .take(parseInt(limit))
+                                    .getManyAndCount()
 
         return { passengers, total };
     
