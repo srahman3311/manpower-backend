@@ -217,7 +217,29 @@ export class RevenueService {
     }
 
     async deleteRevenue(id?: string): Promise<void> {
-        await this.revenueRepository.update({ id: parseInt(id as string) }, { deleted: true })
+
+        const parsedId = parseInt(id as string);
+
+        const revenue = await this.getRevenueById(parsedId);
+        if(!revenue) throw new NotFoundException("Expense Not Found");
+
+        const { 
+            creditedToAccountId, 
+            userId, 
+            amount 
+        } = revenue;
+
+        if(creditedToAccountId) {
+            await this.accountService.updateAccountBalance(creditedToAccountId, -amount)
+        } else if(userId) {
+            await this.userService.updateUserBalance(userId, -amount)
+        }
+
+        await this.revenueRepository.update(
+            { id: parsedId }, 
+            { deleted: true }
+        );
+        
     }
 
 }

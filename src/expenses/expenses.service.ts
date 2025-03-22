@@ -242,7 +242,29 @@ export class ExpenseService {
     }
 
     async deleteExpense(id?: string): Promise<void> {
-        await this.expenseRepository.update({ id: parseInt(id as string) }, { deleted: true })
+
+        const parsedId = parseInt(id as string);
+
+        const expense = await this.getExpenseById(parsedId);
+        if(!expense) throw new NotFoundException("Expense Not Found");
+
+        const { 
+            debitedFromAccountId, 
+            userId, 
+            amount 
+        } = expense;
+
+        if(debitedFromAccountId) {
+            await this.accountService.updateAccountBalance(debitedFromAccountId, amount)
+        } else if(userId) {
+            await this.userService.updateUserBalance(userId, amount)
+        }
+
+        await this.expenseRepository.update(
+            { id: parsedId }, 
+            { deleted: true }
+        );
+
     }
 
 }
