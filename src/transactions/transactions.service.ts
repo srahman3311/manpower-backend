@@ -1,4 +1,5 @@
 import { 
+    BadRequestException,
     Injectable, 
     NotFoundException
 } from "@nestjs/common";
@@ -72,6 +73,28 @@ export class TransactionService {
 
     }
 
+    private async validateTransactionDto(createTransactionDto: CreateTransactionDTO) {
+
+        const { 
+            debitedFromUserId,
+            debitedFromAccountId,
+            creditedToAccountId,
+            creditedToUserId 
+        } = createTransactionDto;
+
+        if (
+            (!debitedFromAccountId && !debitedFromUserId) ||
+            (!creditedToAccountId && !creditedToUserId) ||
+            ((debitedFromAccountId && creditedToAccountId) && (debitedFromAccountId === creditedToAccountId)) ||
+            ((debitedFromUserId && creditedToUserId) && (debitedFromUserId === creditedToUserId)) ||
+            (debitedFromAccountId && debitedFromUserId) ||
+            (creditedToAccountId && creditedToUserId)
+        ) {
+            throw new BadRequestException("Bad Request")
+        }
+
+    }
+
 
     async createTransaction(ctx: JwtPayload, createTransactionDto: CreateTransactionDTO): Promise<Transaction> {
 
@@ -87,6 +110,8 @@ export class TransactionService {
             creditedToAccountId,
             creditedToUserId 
         } = createTransactionDto;
+
+        await this.validateTransactionDto(createTransactionDto);
 
         await this.debitAndCreditUserAndAccountBalance(createTransactionDto)
 
@@ -120,6 +145,8 @@ export class TransactionService {
             creditedToAccountId,
             creditedToUserId
         } = createTransactionDto;
+
+        await this.validateTransactionDto(createTransactionDto);
 
         const transaction = await this.getTransactionById(id);
         if(!transaction) throw new NotFoundException("Transaction Not Found");
