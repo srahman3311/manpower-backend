@@ -23,6 +23,7 @@ export class TransactionController {
     constructor(private readonly transactionService: TransactionService) {}
 
     @Get("")
+    @RolesAuth(["admin", "tenant"])
     getTransactions(
         @Query() queryDto: QueryDTO,
         @RequestContext() ctx: JwtPayload
@@ -31,6 +32,7 @@ export class TransactionController {
     }
 
     @Post("create")
+    @RolesAuth(["admin", "tenant"])
     createTransaction(
         @Body() createTransactionDto: CreateTransactionDTO,
         @RequestContext() ctx: JwtPayload
@@ -39,6 +41,7 @@ export class TransactionController {
     }
 
     @Patch(":id/edit")
+    @RolesAuth(["admin", "tenant"])
     editTransaction(
         @Param() paramDto: ParamDTO, 
         @Body() createTransactionDto: CreateTransactionDTO
@@ -67,6 +70,7 @@ export class TransactionController {
     }
 
     @Delete(":id/delete")
+    @RolesAuth(["admin", "tenant"])
     deleteTransaction(@Param() paramDto: ParamDTO): Promise<void> {
         return this.transactionService.deleteTransaction(paramDto.id)
     }

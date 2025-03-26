@@ -13,6 +13,7 @@ import { CreateAccountDTO } from "./dto/create-accoount.dto";
 import { Account } from "./account.entity";
 import { ParamDTO, QueryDTO } from "src/global/dto/param-query.dto";
 import { RequestContext } from "src/global/decorators/RequestContext.decorator";
+import { RolesAuth } from "src/global/decorators/RolesAuth.decorator";
 import { JwtPayload } from "src/global/types/JwtPayload";
 
 @Controller("api/accounts")
@@ -22,6 +23,7 @@ export class AccountController {
     constructor(private readonly accountService: AccountService) {}
 
     @Get("")
+    @RolesAuth(["admin", "tenant"])
     getAccounts(
         @Query() queryDto: QueryDTO,
         @RequestContext() ctx: JwtPayload
@@ -30,11 +32,13 @@ export class AccountController {
     }
 
     @Get(":id") 
+    @RolesAuth(["admin", "tenant"])
     getAccountById(@Param() params: { id: number }): Promise<Account | null> {
         return this.accountService.getAccountById(params.id)
     }
 
     @Post("create")
+    @RolesAuth(["admin", "tenant"])
     createAccount(
         @Body() createAccountDto: CreateAccountDTO,
         @RequestContext() ctx: JwtPayload
@@ -43,6 +47,7 @@ export class AccountController {
     }
 
     @Patch(":id/edit")
+    @RolesAuth(["admin", "tenant"])
     editAccount(
         @Param() paramDto: ParamDTO, 
         @Body() createAccountDto: CreateAccountDTO
@@ -54,6 +59,7 @@ export class AccountController {
     }
 
     @Delete(":id/delete")
+    @RolesAuth(["admin", "tenant"])
     deleteAccount(@Param() paramDto: ParamDTO): Promise<void> {
         return this.accountService.deleteAccount(paramDto.id)
     }
