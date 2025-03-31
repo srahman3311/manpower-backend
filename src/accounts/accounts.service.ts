@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Repository, QueryRunner } from "typeorm";
 import { CreateAccountDTO } from "./dto/create-accoount.dto";
 import { Account } from "./account.entity";
 import { QueryDTO } from "src/global/dto/param-query.dto";
@@ -103,6 +103,22 @@ export class AccountService {
         );
             
     }
+
+    async updateAccountBalanceWithTransaction(id: number, queryRunner: QueryRunner, amount: number): Promise<void> {
+    
+        const account = await this.getAccountById(id);
+        if(!account) throw new NotFoundException("Account doesn't exist");
+
+        const newBalance = account.balance + amount; 
+
+        await queryRunner.manager.update(
+            Account, 
+            { id }, 
+            { balance: newBalance }
+        )
+    
+    }
+    
     
     async deleteAccount(id?: string): Promise<void> {
         await this.accountRepository.update({ id: parseInt(id as string) }, { deleted: true })

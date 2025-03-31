@@ -1,9 +1,10 @@
 import { 
+    BadRequestException,
     Injectable, 
     NotFoundException
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository} from "typeorm";
+import { Repository, DataSource } from "typeorm";
 import { Tenant } from "src/tenants/tenant.entity";
 import { Job } from "src/jobs/job.entity";
 import { Passenger } from "src/passengers/entities/passenger.entity";
@@ -23,7 +24,8 @@ export class ExpenseService {
     constructor(
         @InjectRepository(Expense) private readonly expenseRepository: Repository<Expense>,
         private readonly userService: UserService,
-        private readonly accountService: AccountService
+        private readonly accountService: AccountService,
+        private dataSource: DataSource
     ) {}
 
     async getExpenseById(id: number): Promise<Expense | null> {
@@ -79,25 +81,47 @@ export class ExpenseService {
             passengerId,
             debitedFromAccountId 
         } = createExpenseDto;
-        
-        if(debitedFromAccountId) {
-            await this.accountService.updateAccountBalance(debitedFromAccountId, -amount)
-        } else {
-            await this.userService.updateUserBalance(sub, -amount)
+
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+
+            if(debitedFromAccountId) {
+                await this.accountService.updateAccountBalanceWithTransaction(
+                    debitedFromAccountId, 
+                    queryRunner,
+                    -amount
+                )
+            } else {
+                await this.userService.updateUserBalanceWithTransaction(
+                    sub,
+                    queryRunner, 
+                    -amount
+                )
+            }
+
+            const expense = queryRunner.manager.create(Expense, {
+                tenant: { id: tenantId } as Tenant,
+                job: jobId ? { id: jobId } as Job : undefined,
+                passenger: passengerId ? { id: passengerId } as Passenger : undefined,
+                debitedFromAccount: debitedFromAccountId ? { id: debitedFromAccountId } as Account : undefined,
+                user: { id: sub } as User,
+                name,
+                description,
+                amount
+            });
+            const savedExpense = await queryRunner.manager.save(expense);
+            await queryRunner.commitTransaction();
+            return savedExpense;
+
+        } catch(error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
         }
-
-        const expense = this.expenseRepository.create({
-            tenant: { id: tenantId } as Tenant,
-            job: jobId ? { id: jobId } as Job : undefined,
-            passenger: passengerId ? { id: passengerId } as Passenger : undefined,
-            debitedFromAccount: debitedFromAccountId ? { id: debitedFromAccountId } as Account : undefined,
-            user: { id: sub } as User,
-            name,
-            description,
-            amount
-        })
-
-        return this.expenseRepository.save(expense);
 
     }
 
@@ -121,98 +145,156 @@ export class ExpenseService {
         const expense = await this.getExpenseById(id);
         if(!expense) throw new NotFoundException("Expense Not Found");
 
-        // Amount more than existing expense amount will be charged from user balance or account selected
-        let adjustableAmount = expense.amount - amount;
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
 
-        // User might be using the existing account or changing it or adding just now
-        if(debitedFromAccountId) {
+        try {
+               
+            // Amount more than existing expense amount will be charged from user balance or account selected
+            let adjustableAmount = expense.amount - amount;
 
-            // User is changing the account. Old account must be refunded and the new one charged.
-            if (
-                expense.debitedFromAccountId && 
-                expense.debitedFromAccountId !== debitedFromAccountId
-            ) {
+            // User might be using the existing account or changing it or adding just now
+            if(debitedFromAccountId) {
 
-                await this.accountService.updateAccountBalance(expense.debitedFromAccountId, expense.amount);
-                await this.accountService.updateAccountBalance(debitedFromAccountId, -amount);
+                // User is changing the account. Old account must be refunded and the new one charged.
+                if (
+                    expense.debitedFromAccountId && 
+                    expense.debitedFromAccountId !== debitedFromAccountId
+                ) {
 
-            // User is keeping the existing account, just adjust the amount
-            } else if(expense.debitedFromAccountId) {
-                await this.accountService.updateAccountBalance(expense.debitedFromAccountId, adjustableAmount);
+                    await this.accountService.updateAccountBalanceWithTransaction(
+                        expense.debitedFromAccountId, 
+                        queryRunner,
+                        expense.amount
+                    );
+                    await this.accountService.updateAccountBalanceWithTransaction(
+                        debitedFromAccountId, 
+                        queryRunner,
+                        -amount
+                    );
 
-            // User is adding account now. Charge the account and deduct the expense from user's account.    
-            } else {
+                // User is keeping the existing account, just adjust the amount
+                } else if(expense.debitedFromAccountId) {
 
-                await this.accountService.updateAccountBalance(debitedFromAccountId, -amount);
+                    await this.accountService.updateAccountBalanceWithTransaction(
+                        expense.debitedFromAccountId, 
+                        queryRunner,
+                        adjustableAmount
+                    );
 
-                if(expense.userId) {
-                    await this.userService.updateUserBalance(expense.userId, expense.amount);
-                } 
-
-            }
-
-        // User is unselecting account or expense was charged from user's account or there was no user involved
-        } else {
-
-            // User is unselecting account and choosing to use user's balance instead
-            if(expense.debitedFromAccountId) {
-
-                await this.accountService.updateAccountBalance(expense.debitedFromAccountId, expense.amount);
-
-                if(expense.userId) {
-                    await this.userService.updateUserBalance(expense.userId, -expense.amount)
+                // User is adding account now. Charge the account and deduct the expense from user's account.    
                 } else {
-                    await this.userService.updateUserBalance(sub, -amount)
+
+                    await this.accountService.updateAccountBalanceWithTransaction(
+                        debitedFromAccountId, 
+                        queryRunner,
+                        -amount
+                    );
+
+                    if(expense.userId) {
+                        await this.userService.updateUserBalanceWithTransaction(
+                            expense.userId, 
+                            queryRunner,
+                            expense.amount
+                        );
+                    } 
+
                 }
 
-            // Just adjust the user's balance
-            } else if(expense.userId) {
-                await this.userService.updateUserBalance(expense.userId, adjustableAmount)
-            } 
-            // There was no user when expense was created, so, charge the logged in user's account
-            else {
-                await this.userService.updateUserBalance(sub, -amount)
+            // User is unselecting account or expense was charged from user's account or there was no user involved
+            } else {
+
+                // User is unselecting account and choosing to use user's balance instead
+                if(expense.debitedFromAccountId) {
+
+                    await this.accountService.updateAccountBalanceWithTransaction(
+                        expense.debitedFromAccountId, 
+                        queryRunner,
+                        expense.amount
+                    );
+
+                    if(expense.userId) {
+                        await this.userService.updateUserBalanceWithTransaction(
+                            expense.userId, 
+                            queryRunner,
+                            -expense.amount
+                        )
+                    } else {
+                        await this.userService.updateUserBalanceWithTransaction(
+                            sub, 
+                            queryRunner,
+                            -amount
+                        )
+                    }
+
+                // Just adjust the user's balance
+                } else if(expense.userId) {
+                    await this.userService.updateUserBalanceWithTransaction(
+                        expense.userId, 
+                        queryRunner,
+                        adjustableAmount
+                    )
+                } 
+                // There was no user when expense was created, so, charge the logged in user's account
+                else {
+                    await this.userService.updateUserBalanceWithTransaction(
+                        sub, 
+                        queryRunner,
+                        -amount
+                    )
+                }
+
             }
 
+            expense.name = name;
+            expense.amount = amount;
+
+            if(description) {
+                expense.description = description;
+            }
+
+            if(!expense.user) {
+                expense.user = { id: sub } as User;
+            }
+
+            if(debitedFromAccountId) {
+                expense.debitedFromAccount = { id: debitedFromAccountId } as Account;
+            }
+
+            if(expense.debitedFromAccountId && !debitedFromAccountId) {
+                expense.debitedFromAccount = null;
+            }
+
+            if(jobId) {
+                expense.job = { id: jobId } as Job;
+            }
+
+            if(passengerId) {
+                expense.passenger = { id: passengerId } as Passenger;
+            }
+
+            if(expense.job && !jobId) {
+                expense.job = null
+            }
+
+            if(expense.passenger && !passengerId) {
+                expense.passenger = null
+            }
+
+            await queryRunner.manager.save(expense);
+
+            await queryRunner.commitTransaction();
+
+            return await this.getExpenseById(id);
+
+        } catch(error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
         }
 
-        expense.name = name;
-        expense.amount = amount;
-
-        if(description) {
-            expense.description = description;
-        }
-
-        if(!expense.user) {
-            expense.user = { id: sub } as User;
-        }
-
-        if(debitedFromAccountId) {
-            expense.debitedFromAccount = { id: debitedFromAccountId } as Account;
-        }
-
-        if(expense.debitedFromAccountId && !debitedFromAccountId) {
-            expense.debitedFromAccount = null;
-        }
-
-        if(jobId) {
-            expense.job = { id: jobId } as Job;
-        }
-
-        if(passengerId) {
-            expense.passenger = { id: passengerId } as Passenger;
-        }
-
-        if(expense.job && !jobId) {
-            expense.job = null
-        }
-
-        if(expense.passenger && !passengerId) {
-            expense.passenger = null
-        }
-
-        await this.expenseRepository.save(expense);
-        return await this.getExpenseById(id);
 
     }
 
@@ -254,16 +336,40 @@ export class ExpenseService {
             amount 
         } = expense;
 
-        if(debitedFromAccountId) {
-            await this.accountService.updateAccountBalance(debitedFromAccountId, amount)
-        } else if(userId) {
-            await this.userService.updateUserBalance(userId, amount)
-        }
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
 
-        await this.expenseRepository.update(
-            { id: parsedId }, 
-            { deleted: true }
-        );
+        try {
+
+            if(debitedFromAccountId) {
+                await this.accountService.updateAccountBalanceWithTransaction(
+                    debitedFromAccountId, 
+                    queryRunner,
+                    amount
+                )
+            } else if(userId) {
+                await this.userService.updateUserBalanceWithTransaction(
+                    userId,
+                    queryRunner, 
+                    amount
+                )
+            }
+    
+            await queryRunner.manager.update(
+                Expense,
+                { id: parsedId }, 
+                { deleted: true }
+            );
+
+            await queryRunner.commitTransaction();
+
+        } catch(error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
+        }
 
     }
 

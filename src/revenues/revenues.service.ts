@@ -1,9 +1,10 @@
 import { 
+    BadRequestException,
     Injectable, 
     NotFoundException
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository} from "typeorm";
+import { Repository, DataSource } from "typeorm";
 import { Tenant } from "src/tenants/tenant.entity";
 import { Job } from "src/jobs/job.entity";
 import { Passenger } from "src/passengers/entities/passenger.entity";
@@ -23,7 +24,8 @@ export class RevenueService {
     constructor(
         @InjectRepository(Revenue) private readonly revenueRepository: Repository<Revenue>,
         private readonly userService: UserService,
-        private readonly accountService: AccountService
+        private readonly accountService: AccountService,
+        private dataSource: DataSource
     ) {}
 
     async getRevenueById(id: number): Promise<Revenue | null> {
@@ -79,24 +81,47 @@ export class RevenueService {
             creditedToAccountId 
         } = createRevenueDto;
 
-        if(creditedToAccountId) {
-            await this.accountService.updateAccountBalance(creditedToAccountId, amount)
-        } else {
-            await this.userService.updateUserBalance(sub, amount)
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+
+            if(creditedToAccountId) {
+                await this.accountService.updateAccountBalanceWithTransaction(
+                    creditedToAccountId, 
+                    queryRunner,
+                    amount
+                )
+            } else {
+                await this.userService.updateUserBalanceWithTransaction(
+                    sub, 
+                    queryRunner,
+                    amount
+                )
+            }
+    
+            const revenue = queryRunner.manager.create(Revenue, {
+                tenant: { id: tenantId } as Tenant,
+                job: jobId ? { id: jobId } as Job : undefined,
+                passenger: passengerId ? { id: passengerId } as Passenger : undefined,
+                creditedToAccount: creditedToAccountId ? { id: creditedToAccountId } as Account : undefined,
+                user: { id: sub } as User,
+                name,
+                description,
+                amount
+            });
+
+            const savedRevenue = await queryRunner.manager.save(revenue);
+            await queryRunner.commitTransaction();
+            return savedRevenue;
+
+        } catch(error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
         }
-
-        const revenue = this.revenueRepository.create({
-            tenant: { id: tenantId } as Tenant,
-            job: jobId ? { id: jobId } as Job : undefined,
-            passenger: passengerId ? { id: passengerId } as Passenger : undefined,
-            creditedToAccount: creditedToAccountId ? { id: creditedToAccountId } as Account : undefined,
-            user: { id: sub } as User,
-            name,
-            description,
-            amount
-        })
-
-        return this.revenueRepository.save(revenue);
 
     }
 
@@ -120,99 +145,156 @@ export class RevenueService {
         const revenue = await this.getRevenueById(id);
         if(!revenue) throw new NotFoundException("Revenue Not Found");
 
-        
-        // Amount more than existing revenue amount will be charged from user balance or account selected
-        let adjustableAmount = amount - revenue.amount;
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
 
-        // User might be using the existing account or changing it or adding just now
-        if(creditedToAccountId) {
+        try {
 
-        // User is changing the account. Old account must be refunded and the new one charged.
-        if (
-            revenue.creditedToAccountId && 
-            revenue.creditedToAccountId !== creditedToAccountId
-        ) {
+            // Amount more than existing revenue amount will be charged from user balance or account selected
+            let adjustableAmount = amount - revenue.amount;
 
-            await this.accountService.updateAccountBalance(revenue.creditedToAccountId, -revenue.amount);
-            await this.accountService.updateAccountBalance(creditedToAccountId, amount);
+            // User might be using the existing account or changing it or adding just now
+            if(creditedToAccountId) {
 
-        // User is keeping the existing account, just adjust the amount
-        } else if(revenue.creditedToAccountId) {
-            await this.accountService.updateAccountBalance(revenue.creditedToAccountId, adjustableAmount);
+                // User is changing the account. Old account must be refunded and the new one charged.
+                if (
+                    revenue.creditedToAccountId && 
+                    revenue.creditedToAccountId !== creditedToAccountId
+                ) {
 
-        // User is adding account now. Credit the account and deduct the revenue from user's account.    
-        } else {
+                    await this.accountService.updateAccountBalanceWithTransaction(
+                        revenue.creditedToAccountId, 
+                        queryRunner,
+                        -revenue.amount
+                    );
+                    await this.accountService.updateAccountBalanceWithTransaction(
+                        creditedToAccountId, 
+                        queryRunner,
+                        amount
+                    );
 
-            await this.accountService.updateAccountBalance(creditedToAccountId, amount);
+                // User is keeping the existing account, just adjust the amount
+                } else if(revenue.creditedToAccountId) {
 
-            if(revenue.userId) {
-                await this.userService.updateUserBalance(revenue.userId, -revenue.amount);
-            } 
+                    await this.accountService.updateAccountBalanceWithTransaction(
+                        revenue.creditedToAccountId, 
+                        queryRunner,
+                        adjustableAmount
+                    );
 
-        }
-
-        // User is unselecting account or revenue was added to user's account or there was no user involved
-        } else {
-
-            // User is unselecting account and choosing to use user's balance instead
-            if(revenue.creditedToAccountId) {
-
-                await this.accountService.updateAccountBalance(revenue.creditedToAccountId, -revenue.amount);
-
-                if(revenue.userId) {
-                    await this.userService.updateUserBalance(revenue.userId, revenue.amount)
+                // User is adding account now. Credit the account and deduct the revenue from user's account.    
                 } else {
-                    await this.userService.updateUserBalance(sub, amount)
+
+                    await this.accountService.updateAccountBalanceWithTransaction(
+                        creditedToAccountId, 
+                        queryRunner,
+                        amount
+                    );
+
+                    if(revenue.userId) {
+                        await this.userService.updateUserBalanceWithTransaction(
+                            revenue.userId, 
+                            queryRunner,
+                            -revenue.amount
+                        );
+                    } 
+
                 }
 
-            // Just adjust the user's balance
-            } else if(revenue.userId) {
-                await this.userService.updateUserBalance(revenue.userId, adjustableAmount)
-            } 
-            // There was no user when revenue was created, so, credit the logged in user's account
-            else {
-                await this.userService.updateUserBalance(sub, amount)
+            // User is unselecting account or revenue was added to user's account or there was no user involved
+            } else {
+
+                // User is unselecting account and choosing to use user's balance instead
+                if(revenue.creditedToAccountId) {
+
+                    await this.accountService.updateAccountBalanceWithTransaction(
+                        revenue.creditedToAccountId, 
+                        queryRunner,
+                        -revenue.amount
+                    );
+
+                    if(revenue.userId) {
+                        await this.userService.updateUserBalanceWithTransaction(
+                            revenue.userId, 
+                            queryRunner,
+                            revenue.amount
+                        )
+                    } else {
+                        await this.userService.updateUserBalanceWithTransaction(
+                            sub,
+                            queryRunner, 
+                            amount
+                        )
+                    }
+
+                // Just adjust the user's balance
+                } else if(revenue.userId) {
+                    await this.userService.updateUserBalanceWithTransaction(
+                        revenue.userId, 
+                        queryRunner,
+                        adjustableAmount
+                    )
+                } 
+                // There was no user when revenue was created, so, credit the logged in user's account
+                else {
+                    await this.userService.updateUserBalanceWithTransaction(
+                        sub, 
+                        queryRunner,
+                        amount
+                    )
+                }
+
             }
 
-        }
-        
-        revenue.name = name;
-        revenue.amount = amount;
+            revenue.name = name;
+            revenue.amount = amount;
+    
+            if(description) {
+                revenue.description = description;
+            }
+    
+            if(!revenue.user) {
+                revenue.user = { id: sub } as User;
+            }
+    
+            if(creditedToAccountId) {
+                revenue.creditedToAccount = { id: creditedToAccountId } as Account;
+            }
+    
+            if(revenue.creditedToAccountId && !creditedToAccountId) {
+                revenue.creditedToAccount = null;
+            }
+            
+            if(jobId) {
+                revenue.job = { id: jobId } as Job;
+            }
+    
+            if(passengerId) {
+                revenue.passenger = { id: passengerId } as Passenger;
+            }
+    
+            if(revenue.job && !jobId) {
+                revenue.job = null
+            }
+    
+            if(revenue.passenger && !passengerId) {
+                revenue.passenger = null
+            }
+    
+            await queryRunner.manager.save(revenue);
 
-        if(description) {
-            revenue.description = description;
+            await queryRunner.commitTransaction();
+
+            return await this.getRevenueById(id);
+
+        } catch(error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
         }
 
-        if(!revenue.user) {
-            revenue.user = { id: sub } as User;
-        }
-
-        if(creditedToAccountId) {
-            revenue.creditedToAccount = { id: creditedToAccountId } as Account;
-        }
-
-        if(revenue.creditedToAccountId && !creditedToAccountId) {
-            revenue.creditedToAccount = null;
-        }
-        
-        if(jobId) {
-            revenue.job = { id: jobId } as Job;
-        }
-
-        if(passengerId) {
-            revenue.passenger = { id: passengerId } as Passenger;
-        }
-
-        if(revenue.job && !jobId) {
-            revenue.job = null
-        }
-
-        if(revenue.passenger && !passengerId) {
-            revenue.passenger = null
-        }
-
-        await this.revenueRepository.save(revenue);
-        return await this.getRevenueById(id);
 
     }
 
@@ -229,16 +311,40 @@ export class RevenueService {
             amount 
         } = revenue;
 
-        if(creditedToAccountId) {
-            await this.accountService.updateAccountBalance(creditedToAccountId, -amount)
-        } else if(userId) {
-            await this.userService.updateUserBalance(userId, -amount)
-        }
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
 
-        await this.revenueRepository.update(
-            { id: parsedId }, 
-            { deleted: true }
-        );
+        try {
+
+            if(creditedToAccountId) {
+                await this.accountService.updateAccountBalanceWithTransaction(
+                    creditedToAccountId,
+                    queryRunner, 
+                    -amount
+                )
+            } else if(userId) {
+                await this.userService.updateUserBalanceWithTransaction(
+                    userId, 
+                    queryRunner,
+                    -amount
+                )
+            }
+    
+            await queryRunner.manager.update(
+                Revenue,
+                { id: parsedId }, 
+                { deleted: true }
+            );
+
+            await queryRunner.commitTransaction();
+
+        } catch(error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
+        }
         
     }
 

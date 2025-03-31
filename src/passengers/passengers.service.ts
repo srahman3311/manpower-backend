@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import { join } from 'path';
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Brackets, Repository, In } from "typeorm";
+import { Brackets, Repository, In, DataSource } from "typeorm";
 import { renderFile } from 'ejs';
 import puppeteer from "puppeteer";
 import { toWords } from 'number-to-words';
@@ -11,10 +11,9 @@ import { Medical } from "./entities/medical.entity";
 import { Passport } from "./entities/passport.entity";
 import { CreatePassengerDTO } from "./dto/create-passenger.dto";
 import { QueryDTO } from "src/global/dto/param-query.dto";
-import { MedicalDTO } from "./dto/medical.dto";
 import { AddressService } from "src/global/addresses/addresses.service";
 import { TenantService } from 'src/tenants/tenants.service';
-import { PassportDTO } from "./dto/passport.dto";
+
 import { JwtPayload } from "src/global/types/JwtPayload";
 
 @Injectable()
@@ -22,10 +21,9 @@ export class PassengerService {
 
     constructor(
         @InjectRepository(Passenger) private passengerRepository: Repository<Passenger>,
-        @InjectRepository(Medical) private medicalRepository: Repository<Medical>,
-        @InjectRepository(Passport) private passportRepository: Repository<Passport>,
         private readonly addressService: AddressService,
-        private readonly tenantService: TenantService
+        private readonly tenantService: TenantService,
+        private dataSource: DataSource
     ) {}
     
     getPassengerById(id: number): Promise<Passenger | null> {
@@ -202,67 +200,55 @@ export class PassengerService {
 
     async createPassenger(tenantId: number, createPassengerDto: CreatePassengerDTO): Promise<Passenger> {
 
-        let address = await this.addressService.createAddress(createPassengerDto.address);
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
 
-        const medical = this.medicalRepository.create(createPassengerDto.medical);
-        await this.medicalRepository.save(medical);
+        try {
 
-        const passport = this.passportRepository.create(createPassengerDto.passport);
-        await this.passportRepository.save(passport);
+            const address = await this.addressService.createAddressWithTransaction(
+                queryRunner, 
+                createPassengerDto.address
+            )
 
-        const passenger = this.passengerRepository.create({
-            ...createPassengerDto,
-            tenantId,
-            email: createPassengerDto.email ?? null,
-            address,
-            medical,
-            passport
-        });
-        
-        return this.passengerRepository.save(passenger);
+            const medical = queryRunner.manager.create(Medical, createPassengerDto.medical)
+            await queryRunner.manager.save(medical);
 
-    }
+            const passport = queryRunner.manager.create(Passport, createPassengerDto.passport);
+            await queryRunner.manager.save(passport);
 
-    private async editPassport(passportId: number, passport: PassportDTO) {
-
-        const passportFieldsToUpdate: Partial<Passport> = { 
-            ...passport, 
-            date: passport.date ? new Date(passport.date) : undefined,
-            expiryDate: passport.expiryDate ? new Date(passport.expiryDate) : undefined
-        };
-        
-        const result = await this.passportRepository.update(
-            { id: passportId },
-            passportFieldsToUpdate
-        );
-
-        if(result.affected === 0) {
-            throw new NotFoundException("Passport Record Not Found")
+            const passenger = queryRunner.manager.create(Passenger, {
+                ...createPassengerDto,
+                tenantId,
+                email: createPassengerDto.email ?? null,
+                address,
+                medical,
+                passport
+            });
+            const savedPassenger = await queryRunner.manager.save(passenger);
+            await queryRunner.commitTransaction();
+            return savedPassenger;
+           
+        } catch(error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
         }
-    }
 
-    private async editMedical(medicalId: number, medical: MedicalDTO) {
-
-        const medicalFieldsToUpdate: Partial<Passport> = { 
-            ...medical, 
-            date: medical.date ? new Date(medical.date) : undefined,
-            expiryDate: medical.expiryDate ? new Date(medical.expiryDate) : undefined
-        };
-        
-        const result = await this.medicalRepository.update(
-            { id: medicalId },
-            medicalFieldsToUpdate
-        );
-
-        if(result.affected === 0) {
-            throw new NotFoundException("Medical Record Not Found")
-        }
     }
 
     async editPassenger(passengerId: string, requestBody: CreatePassengerDTO): Promise<Passenger | null> {
 
         const id = parseInt(passengerId);
-        const { birthDate, visaExpiryDate, visaIssueDate, jobId } = requestBody;
+        const { 
+            birthDate, 
+            visaExpiryDate, 
+            visaIssueDate, 
+            jobId,
+            medical,
+            passport 
+        } = requestBody;
 
         const passenger = await this.getPassengerById(id);
         if(!passenger) throw new NotFoundException("Passenger Not Found")
@@ -276,35 +262,65 @@ export class PassengerService {
             passport: undefined,
             medical: undefined
         };
+        const medicalFieldsToUpdate: Partial<Medical> = { 
+            ...medical, 
+            date: medical.date ? new Date(medical.date) : undefined,
+            expiryDate: medical.expiryDate ? new Date(medical.expiryDate) : undefined
+        };
+       
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
 
-        await this.addressService.editAddress(
-            passenger?.address.id,
-            requestBody.address
-        );
+        try {
 
-        if(requestBody.passport) {
-            await this.editPassport(passenger.passport.id, requestBody.passport);
+            if(requestBody.address) {
+                await this.addressService.editAddressWithTransaction(
+                    passenger.address.id,
+                    queryRunner,
+                    requestBody.address
+                );
+            }
+        
+            await queryRunner.manager.update(
+                Medical, 
+                { id: passenger.medical.id }, 
+                medicalFieldsToUpdate
+            )
+            
+            if(passport) {
+                const passportFieldsToUpdate: Partial<Passport> = { 
+                    ...passport, 
+                    date: passport?.date ? new Date(passport.date) : undefined,
+                    expiryDate: passport?.expiryDate ? new Date(passport.expiryDate) : undefined
+                };
+                await queryRunner.manager.update(
+                    Passport, 
+                    { id: passenger.passport.id }, 
+                    passportFieldsToUpdate
+                )
+            }
+          
+            if(passenger.job && !jobId) {
+                passenger.job = null;
+                await queryRunner.manager.save(passenger);
+            }
+
+            await queryRunner.manager.update(
+                Passenger, 
+                { id: passenger.id }, 
+                fieldsToUpdate
+            )
+          
+            await queryRunner.commitTransaction();
+            return await this.getPassengerById(id);
+
+        } catch(error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
         }
-
-        if(requestBody.medical) {
-            await this.editMedical(passenger.medical.id, requestBody.medical);
-        }
-
-        const result = await this.passengerRepository.update(
-            { id },
-            fieldsToUpdate
-        );
-
-        if(result.affected === 0) {
-            throw new NotFoundException("Passenger Not Found")
-        }
-
-        if(passenger.job && !jobId) {
-            passenger.job = null;
-            await this.passengerRepository.save(passenger);
-        }
-
-        return this.passengerRepository.findOne({ where: { id } });
 
     }
 

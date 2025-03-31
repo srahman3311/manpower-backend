@@ -4,7 +4,7 @@ import {
     NotFoundException
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository} from "typeorm";
+import { QueryRunner, Repository, DataSource } from "typeorm";
 import { Tenant } from "src/tenants/tenant.entity";
 import { CreateTransactionDTO } from "./dto/create-transaction.dto";
 import { QueryDTO } from "src/global/dto/param-query.dto";
@@ -22,7 +22,8 @@ export class TransactionService {
     constructor(
         @InjectRepository(Transaction) private readonly transactionRepository: Repository<Transaction>,
         private readonly userService: UserService,
-        private readonly accountService: AccountService
+        private readonly accountService: AccountService,
+        private dataSource: DataSource
     ) {}
 
     async getTransactionById(id: number): Promise<Transaction | null> {
@@ -113,21 +114,42 @@ export class TransactionService {
 
         await this.validateTransactionDto(createTransactionDto);
 
-        await this.debitAndCreditUserAndAccountBalance(createTransactionDto)
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
 
-        const transaction = this.transactionRepository.create({
-            tenant: { id: tenantId } as Tenant,
-            debitedFromAccount: debitedFromAccountId ? { id: debitedFromAccountId } as Account : undefined,
-            debitedFromUser: debitedFromUserId ? { id: debitedFromUserId } as User : undefined,
-            creditedToAccount: creditedToAccountId ? { id: creditedToAccountId } as Account : undefined,
-            creditedToUser: creditedToUserId ? { id: creditedToUserId } as User : undefined,
-            user: { id: sub } as User,
-            name,
-            description,
-            amount
-        })
+        try {
 
-        return this.transactionRepository.save(transaction);
+            await this.debitAndCreditUserAndAccountBalance(
+                queryRunner, 
+                createTransactionDto
+            )
+    
+            const transaction = queryRunner.manager.create(Transaction, {
+                tenant: { id: tenantId } as Tenant,
+                debitedFromAccount: debitedFromAccountId ? { id: debitedFromAccountId } as Account : undefined,
+                debitedFromUser: debitedFromUserId ? { id: debitedFromUserId } as User : undefined,
+                creditedToAccount: creditedToAccountId ? { id: creditedToAccountId } as Account : undefined,
+                creditedToUser: creditedToUserId ? { id: creditedToUserId } as User : undefined,
+                user: { id: sub } as User,
+                name,
+                description,
+                amount
+            })
+    
+            const savedTransaction = await queryRunner.manager.save(transaction);
+
+            await queryRunner.commitTransaction();
+
+            return savedTransaction;
+            
+
+        } catch(error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
+        }
 
     }
 
@@ -151,39 +173,54 @@ export class TransactionService {
         const transaction = await this.getTransactionById(id);
         if(!transaction) throw new NotFoundException("Transaction Not Found");
 
-        await this.adjustAccountAndUserBalance(transaction);
-        await this.debitAndCreditUserAndAccountBalance(createTransactionDto);
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
 
-        transaction.name = name;
-        transaction.amount = amount;
+        try {
 
-        if(description) {
-            transaction.description = description;
+            await this.adjustAccountAndUserBalance(queryRunner, transaction);
+            await this.debitAndCreditUserAndAccountBalance(queryRunner, createTransactionDto);
+
+            transaction.name = name;
+            transaction.amount = amount;
+    
+            if(description) {
+                transaction.description = description;
+            }
+    
+            if(debitedFromUserId) {
+                transaction.debitedFromUser = { id: debitedFromUserId } as User;
+                transaction.debitedFromAccount = null;
+            }
+    
+            if(debitedFromAccountId) {
+                transaction.debitedFromAccount = { id: debitedFromAccountId } as Account;
+                transaction.debitedFromUser = null;
+            }
+    
+            if(creditedToUserId) {
+                transaction.creditedToUser = { id: creditedToUserId } as User;
+                transaction.creditedToAccount = null;
+            }
+    
+         
+            if(creditedToAccountId) {
+                transaction.creditedToAccount = { id: creditedToAccountId } as Account;
+                transaction.creditedToUser = null;
+            }
+    
+            await queryRunner.manager.save(transaction);
+            await queryRunner.commitTransaction();
+
+            return await this.getTransactionById(id);
+
+        } catch(error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
         }
-
-        if(debitedFromUserId) {
-            transaction.debitedFromUser = { id: debitedFromUserId } as User;
-            transaction.debitedFromAccount = null;
-        }
-
-        if(debitedFromAccountId) {
-            transaction.debitedFromAccount = { id: debitedFromAccountId } as Account;
-            transaction.debitedFromUser = null;
-        }
-
-        if(creditedToUserId) {
-            transaction.creditedToUser = { id: creditedToUserId } as User;
-            transaction.creditedToAccount = null;
-        }
-
-     
-        if(creditedToAccountId) {
-            transaction.creditedToAccount = { id: creditedToAccountId } as Account;
-            transaction.creditedToUser = null;
-        }
-
-        await this.transactionRepository.save(transaction);
-        return await this.getTransactionById(id);
 
     }
 
@@ -194,17 +231,34 @@ export class TransactionService {
         const transaction = await this.getTransactionById(parsedId);
         if(!transaction) throw new NotFoundException("Transaction doesn't exist");
 
-        await this.adjustAccountAndUserBalance(transaction);
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
 
-        await this.transactionRepository.update(
-            { id: parsedId }, 
-            { deleted: true }
-        );
+        try {
+
+                
+            await this.adjustAccountAndUserBalance(queryRunner, transaction);
+
+            await queryRunner.manager.update(
+                Transaction,
+                { id: parsedId }, 
+                { deleted: true }
+            );
+
+            await queryRunner.commitTransaction();
+
+        } catch(error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
+        }
 
     }
 
     // When a transaction is edited or deleted
-    private async adjustAccountAndUserBalance(transaction: Transaction) {
+    private async adjustAccountAndUserBalance(queryRunner: QueryRunner, transaction: Transaction) {
 
         const {
             debitedFromAccountId,
@@ -215,24 +269,40 @@ export class TransactionService {
         } = transaction;
 
         if(debitedFromAccountId) {
-            await this.accountService.updateAccountBalance(debitedFromAccountId, amount)
+            await this.accountService.updateAccountBalanceWithTransaction(
+                debitedFromAccountId, 
+                queryRunner,
+                amount
+            )
         }
 
         if(debitedFromUserId){
-            await this.userService.updateUserBalance(debitedFromUserId, amount)
+            await this.userService.updateUserBalanceWithTransaction(
+                debitedFromUserId, 
+                queryRunner,
+                amount
+            )
         }
 
         if(creditedToAccountId) {
-            await this.accountService.updateAccountBalance(creditedToAccountId, -amount)
+            await this.accountService.updateAccountBalanceWithTransaction(
+                creditedToAccountId,
+                queryRunner, 
+                -amount
+            )
         } 
         
         if(creditedToUserId){
-            await this.userService.updateUserBalance(creditedToUserId, -amount)
+            await this.userService.updateUserBalanceWithTransaction(
+                creditedToUserId, 
+                queryRunner,
+                -amount
+            )
         }
 
     }
 
-    private async debitAndCreditUserAndAccountBalance(params: CreateTransactionDTO) {
+    private async debitAndCreditUserAndAccountBalance(queryRunner: QueryRunner, params: CreateTransactionDTO) {
 
         const { 
             amount,
@@ -243,19 +313,35 @@ export class TransactionService {
         } = params;
 
         if(debitedFromAccountId) {
-            await this.accountService.updateAccountBalance(debitedFromAccountId, -amount)
+            await this.accountService.updateAccountBalanceWithTransaction(
+                debitedFromAccountId, 
+                queryRunner,
+                -amount
+            )
         } 
         
         if(debitedFromUserId){
-            await this.userService.updateUserBalance(debitedFromUserId, -amount)
+            await this.userService.updateUserBalanceWithTransaction(
+                debitedFromUserId,
+                queryRunner, 
+                -amount
+            )
         }
 
         if(creditedToAccountId) {
-            await this.accountService.updateAccountBalance(creditedToAccountId, amount)
+            await this.accountService.updateAccountBalanceWithTransaction(
+                creditedToAccountId, 
+                queryRunner,
+                amount
+            )
         } 
         
         if(creditedToUserId){
-            await this.userService.updateUserBalance(creditedToUserId, amount)
+            await this.userService.updateUserBalanceWithTransaction(
+                creditedToUserId, 
+                queryRunner,
+                amount
+            )
         }
 
     }

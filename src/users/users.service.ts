@@ -4,7 +4,7 @@ import {
     BadRequestException,  
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, In } from "typeorm";
+import { Repository, QueryRunner } from "typeorm";
 import { User } from "./entities/user.entity";
 import { Role } from "./entities/role.entity";
 import { Permission } from "./entities/permission.entity";
@@ -216,6 +216,21 @@ export class UserService {
             { balance: newBalance }
         );
             
+    }
+
+    async updateUserBalanceWithTransaction(id: number, queryRunner: QueryRunner, amount: number): Promise<void> {
+
+        const user = await this.getUserById(id);
+        if(!user) throw new NotFoundException("User doesn't exist");
+
+        const newBalance = user.balance + amount; 
+
+        await queryRunner.manager.update(
+            User, 
+            { id }, 
+            { balance: newBalance }
+        )
+    
     }
 
     async deleteUser(id?: string): Promise<void> {

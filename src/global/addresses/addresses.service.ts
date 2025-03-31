@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Repository, QueryRunner } from "typeorm";
 import { QueryDTO } from "src/global/dto/param-query.dto";
 import { AddressDTO } from "./address.dto";
 import { Address } from "src/global/addresses/address.entity";
@@ -54,6 +54,12 @@ export class AddressService {
         return this.addressRepository.save(address);
     }
 
+    async createAddressWithTransaction(queryRunner: QueryRunner, addressDto?: AddressDTO): Promise<Address> {
+        const address = queryRunner.manager.create(Address, addressDto)
+        await queryRunner.manager.save(address);
+        return address;
+    }
+
     async editAddress(addressId?: number, addressDto?: AddressDTO): Promise<Address | null> {
 
         const addressFieldsToUpdate: Partial<Address> = { ...addressDto };
@@ -69,6 +75,19 @@ export class AddressService {
 
         return this.addressRepository.findOne({ where: { id: addressId } });
 
+    }
+
+    async editAddressWithTransaction(
+        addressId: number, 
+        queryRunner: QueryRunner, 
+        addressDto?: AddressDTO
+    ): Promise<void> {
+        const addressFieldsToUpdate: Partial<Address> = { ...addressDto };
+        await queryRunner.manager.update(
+            Address, 
+            { id: addressId }, 
+            addressFieldsToUpdate
+        )
     }
 
     async deleteAddress(id?: string): Promise<void> {
