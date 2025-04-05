@@ -94,6 +94,10 @@ export class CreatePassengerDTO {
     sale: number
 
     @IsOptional()
+    @IsString()
+    imageUrl: string
+
+    @IsOptional()
     address: AddressDTO
 
     @IsOptional()
