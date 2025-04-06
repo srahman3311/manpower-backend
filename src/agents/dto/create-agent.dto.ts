@@ -23,4 +23,9 @@ export class CreateAgentDTO {
     @IsOptional()
     address: AddressDTO
 
+    @IsOptional()
+    @IsString()
+    imageUrl: string
+
+
 }

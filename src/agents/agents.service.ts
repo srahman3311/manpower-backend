@@ -67,6 +67,7 @@ export class AgentService {
             email,
             phone, 
             category,
+            imageUrl,
         } = createAgentDto;
 
         let address = await this.addressService.createAddress(createAgentDto.address);
@@ -78,7 +79,8 @@ export class AgentService {
             category,
             tenant: { id: tenantId } as Tenant,
             email: email ?? null,
-            address
+            address,
+            imageUrl
         });
         
         return this.agentRepository.save(agent);
@@ -93,6 +95,7 @@ export class AgentService {
             lastName,
             email,
             phone,
+            imageUrl
         } = params;
 
         const parsedId = parseInt(id as string)
@@ -104,6 +107,7 @@ export class AgentService {
             lastName,
             email,
             phone,
+            imageUrl
         };
 
         await this.addressService.editAddress(

@@ -95,6 +95,7 @@ export class UserService {
             lastName,
             email,
             phone,
+            imageUrl,
             roles, 
             permissions 
         } = createUserDto;
@@ -115,6 +116,7 @@ export class UserService {
             lastName,
             email,
             phone,
+            imageUrl,
             password: hash,
             roles: foundRroles,
             permissions: foundPermissions,
@@ -133,6 +135,7 @@ export class UserService {
             lastName,
             phone,
             email,
+            imageUrl,
             roles,
             permissions,
             password,
@@ -165,6 +168,7 @@ export class UserService {
             lastName,
             phone,
             email,
+            imageUrl,
             balance
         };
 
