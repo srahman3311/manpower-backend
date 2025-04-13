@@ -13,6 +13,7 @@ import { CreatePassengerDTO } from "./dto/create-passenger.dto";
 import { QueryDTO } from "src/global/dto/param-query.dto";
 import { AddressService } from "src/global/addresses/addresses.service";
 import { TenantService } from 'src/tenants/tenants.service';
+import { Flight } from './entities/flight.entity';
 
 import { JwtPayload } from "src/global/types/JwtPayload";
 
@@ -30,7 +31,18 @@ export class PassengerService {
         const passenger = this.passengerRepository.findOne(
             { 
                 where: { id },
-                relations: ["address", "medical", "passport", "job", "agent"] 
+                relations: ["address", "medical", "passport", "job", "agent", "flights"] 
+            },
+            
+        );
+        return passenger;
+    }
+
+    getPassengersByJobId(jobId: number): Promise<Passenger[]> {
+        const passenger = this.passengerRepository.find(
+            { 
+                where: { jobId },
+                relations: ["medical", "passport", "agent", "flights"] 
             },
             
         );
@@ -53,6 +65,7 @@ export class PassengerService {
                             .leftJoinAndSelect("passenger.agent", "agent")
                             .leftJoinAndSelect("passenger.medical", "medical")
                             .leftJoinAndSelect("passenger.passport", "passport")
+                            .leftJoinAndSelect("passenger.flights", "flights")
                             .where(
                                 `(
                                     passenger.name LIKE :searchText OR 
@@ -220,7 +233,6 @@ export class PassengerService {
             const passenger = queryRunner.manager.create(Passenger, {
                 ...createPassengerDto,
                 tenantId,
-                email: createPassengerDto.email ?? null,
                 address,
                 medical,
                 passport
@@ -245,9 +257,13 @@ export class PassengerService {
             birthDate, 
             visaExpiryDate, 
             visaIssueDate, 
+            visaApplicationDate,
+            visaApplicationFingerDate,
+            visaBMATFingerDate,
             jobId,
             medical,
-            passport 
+            passport,
+            flights, 
         } = requestBody;
 
         const passenger = await this.getPassengerById(id);
@@ -258,9 +274,13 @@ export class PassengerService {
             birthDate: birthDate ? new Date(birthDate) : undefined,
             visaExpiryDate: visaExpiryDate ? new Date(visaExpiryDate) : undefined,
             visaIssueDate: visaIssueDate ? new Date(visaIssueDate) : undefined,
+            visaApplicationDate: visaApplicationDate ? new Date(visaApplicationDate) : undefined,
+            visaApplicationFingerDate: visaApplicationFingerDate ? new Date(visaApplicationFingerDate) : undefined,
+            visaBMATFingerDate: visaBMATFingerDate ? new Date(visaBMATFingerDate) : undefined,
             address: undefined,
             passport: undefined,
-            medical: undefined
+            medical: undefined,
+            flights: undefined
         };
         const medicalFieldsToUpdate: Partial<Medical> = { 
             ...medical, 
@@ -299,6 +319,23 @@ export class PassengerService {
                     { id: passenger.passport.id }, 
                     passportFieldsToUpdate
                 )
+            }
+
+            const flightsToDelete = passenger.flights.filter(flight => {
+                const doesExist = flights.some(item => item.id && item.id === flight.id);
+                return !doesExist
+            }).map(flight => flight.id);
+
+            if(flightsToDelete.length) {
+                await queryRunner.manager.delete(Flight, { id: In(flightsToDelete) });      
+            }
+
+            const flightsToAdd = flights.filter(flight => !flight.id).map(flight => {
+                return queryRunner.manager.create(Flight, { ...flight, passenger: { id } });
+            });
+            
+            if(flightsToAdd.length) {
+                await queryRunner.manager.save(flightsToAdd);
             }
           
             if(passenger.job && !jobId) {

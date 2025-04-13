@@ -6,6 +6,7 @@ import {
     UpdateDateColumn,
     OneToOne,
     ManyToOne,
+    OneToMany,
     JoinColumn 
 } from "typeorm";
 import { Address } from "src/global/addresses/address.entity";
@@ -13,6 +14,7 @@ import { Agent } from "src/agents/agent.entity";
 import { Job } from "src/jobs/job.entity";
 import { Passport } from "./passport.entity";
 import { Medical } from "./medical.entity";
+import { Flight } from "./flight.entity";
 import { Tenant } from "src/tenants/tenant.entity";
 
 export enum PassengerStatus {
@@ -121,13 +123,30 @@ export class Passenger {
     visaNumber: string
 
     @Column({ nullable: true })
+    visaApplicationNumber: string
+
+    @Column({ nullable: true })
+    visaApplicationDate: Date
+
+    @Column({ nullable: true })
+    visaApplicationFingerDate: Date
+
+    @Column({ nullable: true })
     visaIssueDate: Date
 
     @Column({ nullable: true })
     visaExpiryDate: Date
 
     @Column({ nullable: true })
+    visaBMATFingerDate: Date
+
+    @Column({ nullable: true })
     idNumber: string
+
+    @OneToMany(() => Flight, (flight) => flight.passenger, {
+        cascade: true,
+    })
+    flights: Flight[];
 
     @Column({ default: 0 })
     cost: number

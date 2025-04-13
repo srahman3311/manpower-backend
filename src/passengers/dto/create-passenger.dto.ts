@@ -2,6 +2,7 @@ import { IsString, IsOptional, IsNumber, IsEnum } from "class-validator";
 import { AddressDTO } from "src/global/addresses/address.dto";
 import { PassportDTO } from "./passport.dto";
 import { MedicalDTO } from "./medical.dto";
+import { FlightDTO } from "./flight.dto";
 import { PassengerStatus } from "../entities/passenger.entity";
 
 export class CreatePassengerDTO {
@@ -83,6 +84,22 @@ export class CreatePassengerDTO {
 
     @IsOptional()
     @IsString()
+    visaApplicationNumber: string
+
+    @IsOptional()
+    @IsString()
+    visaApplicationDate: string
+
+    @IsOptional()
+    @IsString()
+    visaApplicationFingerDate: string
+
+    @IsOptional()
+    @IsString()
+    visaBMATFingerDate: string
+
+    @IsOptional()
+    @IsString()
     idNumber: string
 
     @IsOptional()
@@ -99,6 +116,9 @@ export class CreatePassengerDTO {
 
     @IsOptional()
     address: AddressDTO
+
+    @IsOptional()
+    flights: FlightDTO[]
 
     @IsOptional()
     @IsEnum(PassengerStatus, { message: "passenger status must be of one of following - processing & completed"})

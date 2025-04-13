@@ -7,6 +7,7 @@ import { User } from './users/entities/user.entity';
 import { Job } from './jobs/job.entity';
 import { Medical } from './passengers/entities/medical.entity';
 import { Passport } from './passengers/entities/passport.entity';
+import { Flight } from './passengers/entities/flight.entity';
 import { Expense } from './expenses/expense.entity';
 import { Revenue } from './revenues/revenue.entity';
 import { Agent } from './agents/agent.entity';
@@ -41,6 +42,7 @@ export const AppDataSource = new DataSource({
     Job, 
     Medical, 
     Passport, 
+    Flight,
     Company,
     Expense,
     Revenue,

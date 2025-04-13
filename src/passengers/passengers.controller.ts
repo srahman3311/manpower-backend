@@ -37,6 +37,14 @@ export class PassengerController {
         return this.passengerService.getUrgentPassengers(query, ctx);
     }
 
+    @Get("job/:jobId")
+    getPassengersByJobId(
+        @Query() params: ParamDTO
+    ): Promise<Passenger[]> {
+        const parsedJobId = parseInt(params.jobId as string);
+        return this.passengerService.getPassengersByJobId(parsedJobId);
+    }
+
 
     @Post("create")
     createPassenger(

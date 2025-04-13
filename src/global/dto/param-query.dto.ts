@@ -22,4 +22,8 @@ export class ParamDTO {
     @IsString()
     id?: string
 
+    @IsOptional()
+    @IsString()
+    jobId: string
+
 }
