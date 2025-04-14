@@ -39,7 +39,7 @@ export class PassengerController {
 
     @Get("job/:jobId")
     getPassengersByJobId(
-        @Query() params: ParamDTO
+        @Param() params: ParamDTO
     ): Promise<Passenger[]> {
         const parsedJobId = parseInt(params.jobId as string);
         return this.passengerService.getPassengersByJobId(parsedJobId);
