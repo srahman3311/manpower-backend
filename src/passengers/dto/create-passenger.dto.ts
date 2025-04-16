@@ -96,7 +96,7 @@ export class CreatePassengerDTO {
 
     @IsOptional()
     @IsString()
-    visaBMATFingerDate: string
+    visaBMETFingerDate: string
 
     @IsOptional()
     @IsString()

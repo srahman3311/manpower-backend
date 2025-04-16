@@ -76,7 +76,6 @@ export class JobService {
             visaQuantity,
             visaUnitPrice
         } = createJobDto;
-        console.log(createJobDto)
 
         const job = this.jobRepository.create({
             tenant: { id: tenantId } as Tenant,

@@ -138,7 +138,7 @@ export class Passenger {
     visaExpiryDate: Date
 
     @Column({ nullable: true })
-    visaBMATFingerDate: Date
+    visaBMETFingerDate: Date
 
     @Column({ nullable: true })
     idNumber: string
