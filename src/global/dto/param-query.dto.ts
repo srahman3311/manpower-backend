@@ -4,15 +4,52 @@ export class QueryDTO {
 
     @IsOptional()
     @IsString()
-    searchText?: string
+    searchText: string
 
     @IsOptional()
     @IsString()
-    skip?: string
+    skip: string
 
     @IsOptional()
     @IsString()
-    limit?: string
+    limit: string
+
+    @IsOptional()
+    @IsString()
+    startDate: string
+
+    @IsOptional()
+    @IsString()
+    endDate: string
+
+    @IsOptional()
+    @IsString()
+    agentId: string
+
+    @IsOptional()
+    @IsString()
+    jobId: string
+
+    @IsOptional()
+    @IsString()
+    isMedicalDone: string
+
+    @IsOptional()
+    @IsString()
+    isBMETFingerDone: string
+
+    @IsOptional()
+    @IsString()
+    isVisaApplicationFingerDone: string
+
+    @IsOptional()
+    @IsString()
+    isVisaIssued: string
+
+    @IsOptional()
+    @IsString()
+    isFlightDone: string
+
 
 }
 

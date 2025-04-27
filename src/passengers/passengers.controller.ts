@@ -45,6 +45,14 @@ export class PassengerController {
         return this.passengerService.getPassengersByJobId(parsedJobId);
     }
 
+    @Get("reports")
+    getPassengerReports(
+        @Query() query: QueryDTO,
+        @RequestContext() ctx: JwtPayload
+    ): Promise<{ passengers: Passenger[], total: number }> {
+        return this.passengerService.getPassengerReports(query, ctx);
+    }
+
 
     @Post("create")
     createPassenger(

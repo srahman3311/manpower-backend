@@ -14,7 +14,6 @@ import { QueryDTO } from "src/global/dto/param-query.dto";
 import { AddressService } from "src/global/addresses/addresses.service";
 import { TenantService } from 'src/tenants/tenants.service';
 import { Flight } from './entities/flight.entity';
-
 import { JwtPayload } from "src/global/types/JwtPayload";
 
 @Injectable()
@@ -71,6 +70,8 @@ export class PassengerService {
                                     passenger.name LIKE :searchText OR 
                                     passenger.phone LIKE :searchText OR
                                     passport.number LIKE :searchText OR
+                                    agent.firstName LIKE :searchText OR
+                                    job.name LIKE :searchText OR
                                     passenger.fatherName LIKE :searchText
 
                                 ) AND passenger.deleted = false AND passenger.tenantId = ${ctx.tenantId}`, 
@@ -82,6 +83,78 @@ export class PassengerService {
                             .skip(parseInt(skip))
                             .take(parseInt(limit))
                             .getManyAndCount()
+
+        return { passengers, total };
+    
+    }
+
+    async getPassengerReports(query: QueryDTO, ctx: JwtPayload): Promise<{ passengers: Passenger[], total: number }> {
+
+        let {
+            startDate,
+            endDate,
+            jobId,
+            agentId,
+            isMedicalDone,
+            isBMETFingerDone,
+            isVisaApplicationFingerDone,
+            isVisaIssued,
+            isFlightDone,
+        } = query;
+
+        const agentIds = agentId ? agentId.split(",") : [];
+        const jobIds = jobId ? jobId.split(",") : [];
+        if(startDate === "undefined") startDate = "2024-01-01";
+        if(endDate === "undefined") endDate = "2050-12-31";
+
+        const queryBuilder = this.passengerRepository
+                            .createQueryBuilder("passenger")
+                            .leftJoinAndSelect("passenger.tenant", "tenant")
+                            .leftJoinAndSelect("passenger.address", "address")
+                            .leftJoinAndSelect("passenger.job", "job")
+                            .leftJoinAndSelect("passenger.agent", "agent")
+                            .leftJoinAndSelect("passenger.medical", "medical")
+                            .leftJoinAndSelect("passenger.passport", "passport")
+                            .leftJoinAndSelect("passenger.flights", "flights")
+                            .where(
+                                `passenger.deleted = false 
+                                AND passenger.tenantId = :tenantId
+                                AND passenger.createdAt BETWEEN :startDate AND :endDate
+                                ${isMedicalDone === "true" ? 'AND medical.date IS NOT NULL' : ''}
+                                ${isBMETFingerDone === "true" ? 'AND passenger.visaBMETFingerDate IS NOT NULL' : ''}
+                                ${isVisaApplicationFingerDone === "true" ? 'AND passenger.visaApplicationFingerDate IS NOT NULL' : ''}
+                                ${isVisaIssued === "true" ? 'AND passenger.visaIssueDate IS NOT NULL' : ''}`,
+                                {
+                                    tenantId: ctx.tenantId,
+                                    startDate,
+                                    endDate
+                                }
+                            )
+
+        if (agentIds.length > 0) {
+            queryBuilder.andWhere('passenger.agentId IN (:...agentIds)', { agentIds });
+        }
+
+        if (jobIds.length > 0) {
+            queryBuilder.andWhere('passenger.jobId IN (:...jobIds)', { jobIds: [...jobIds, "4"] });
+        }
+
+        if (isFlightDone === "true") {
+            queryBuilder.andWhere((qb) => {
+                const subQuery = qb.subQuery()
+                    .select("1")
+                    .from("flights", "f")
+                    .where("f.passengerId = passenger.id")
+                    .getQuery();
+                // Checks if at least 1 flight exists
+                return `EXISTS (${subQuery})`; 
+            });
+        }
+
+
+        const [passengers, total] = await queryBuilder
+                                    .orderBy("passenger.createdAt", "DESC")
+                                    .getManyAndCount();
 
         return { passengers, total };
     
@@ -172,7 +245,6 @@ export class PassengerService {
 
     }
 
-    
     async getUrgentPassengers(query: QueryDTO, ctx: JwtPayload): Promise<{ passengers: Passenger[], total: number }> {
 
         const { 
