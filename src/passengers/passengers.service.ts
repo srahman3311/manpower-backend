@@ -123,7 +123,7 @@ export class PassengerService {
                                 ${isMedicalDone === "true" ? 'AND medical.date IS NOT NULL' : ''}
                                 ${isBMETFingerDone === "true" ? 'AND passenger.visaBMETFingerDate IS NOT NULL' : ''}
                                 ${isVisaApplicationFingerDone === "true" ? 'AND passenger.visaApplicationFingerDate IS NOT NULL' : ''}
-                                ${isVisaIssued === "true" ? 'AND passenger.visaIssueDate IS NOT NULL' : ''}`,
+                                ${isVisaIssued === "true" ? 'AND passenger.visaNumber IS NOT NULL' : ''}`,
                                 {
                                     tenantId: ctx.tenantId,
                                     startDate,
