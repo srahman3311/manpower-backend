@@ -326,12 +326,6 @@ export class PassengerService {
 
         const id = parseInt(passengerId);
         const { 
-            birthDate, 
-            visaExpiryDate, 
-            visaIssueDate, 
-            visaApplicationDate,
-            visaApplicationFingerDate,
-            visaBMETFingerDate,
             jobId,
             medical,
             passport,
@@ -341,23 +335,15 @@ export class PassengerService {
         const passenger = await this.getPassengerById(id);
         if(!passenger) throw new NotFoundException("Passenger Not Found")
 
-        let fieldsToUpdate: Partial<Passenger> = { 
+        // Cannot update relational fields with update query. That's why explicitly
+        // assigning undefined to relational fields here and later below updating
+        // those fields individually based on conditions if there is any
+        let fieldsToUpdate = { 
             ...requestBody,
-            birthDate: birthDate ? new Date(birthDate) : undefined,
-            visaExpiryDate: visaExpiryDate ? new Date(visaExpiryDate) : undefined,
-            visaIssueDate: visaIssueDate ? new Date(visaIssueDate) : undefined,
-            visaApplicationDate: visaApplicationDate ? new Date(visaApplicationDate) : undefined,
-            visaApplicationFingerDate: visaApplicationFingerDate ? new Date(visaApplicationFingerDate) : undefined,
-            visaBMETFingerDate: visaBMETFingerDate ? new Date(visaBMETFingerDate) : undefined,
             address: undefined,
             passport: undefined,
             medical: undefined,
             flights: undefined
-        };
-        const medicalFieldsToUpdate: Partial<Medical> = { 
-            ...medical, 
-            date: medical.date ? new Date(medical.date) : undefined,
-            expiryDate: medical.expiryDate ? new Date(medical.expiryDate) : undefined
         };
        
         const queryRunner = this.dataSource.createQueryRunner();
@@ -374,22 +360,19 @@ export class PassengerService {
                 );
             }
         
+            // Medical will always have the status field, that is why not doing if(medical) check like
+            // passport and address. Because passport and address could be totally undefined. 
             await queryRunner.manager.update(
                 Medical, 
                 { id: passenger.medical.id }, 
-                medicalFieldsToUpdate
+                medical
             )
             
             if(passport) {
-                const passportFieldsToUpdate: Partial<Passport> = { 
-                    ...passport, 
-                    date: passport?.date ? new Date(passport.date) : undefined,
-                    expiryDate: passport?.expiryDate ? new Date(passport.expiryDate) : undefined
-                };
                 await queryRunner.manager.update(
                     Passport, 
                     { id: passenger.passport.id }, 
-                    passportFieldsToUpdate
+                    passport
                 )
             }
 
