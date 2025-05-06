@@ -29,6 +29,23 @@ export class RevenueController {
         return this.revenueService.getRevenues(queryDto, ctx)
     }
 
+    @Get("job/:jobId")
+    getRevenuesByJobId(
+        @Param() params: ParamDTO
+    ): Promise<Revenue[]> {
+        const parsedJobId = parseInt(params.jobId as string);
+        return this.revenueService.getRevenuesByJobId(parsedJobId);
+    }
+
+    
+    @Get("passenger/:passengerId")
+    getRevenuesByPassengerId(
+        @Param() params: ParamDTO
+    ): Promise<Revenue[]> {
+        const parsedPassengerId = parseInt(params.passengerId as string);
+        return this.revenueService.getRevenuesByPassengerId(parsedPassengerId);
+    }
+
     @Post("create")
     createRevenue(
         @Body() createRevenueDto: CreateRevenueDTO,

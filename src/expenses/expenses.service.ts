@@ -68,6 +68,28 @@ export class ExpenseService {
 
     }
 
+    getExpensesByJobId(jobId: number): Promise<Expense[]> {
+        const expenses = this.expenseRepository.find(
+            { 
+                where: { jobId },
+                relations: ["passenger", "debitedFromAccount", "user"]  
+            },
+            
+        );
+        return expenses;
+    }
+
+    getExpensesByPassengerId(passengerId: number): Promise<Expense[]> {
+        const expenses = this.expenseRepository.find(
+            { 
+                where: { passengerId },
+                relations: ["job", "debitedFromAccount", "user"]  
+            },
+            
+        );
+        return expenses;
+    }
+
     async createExpense(ctx: JwtPayload, createExpenseDto: CreateExpenseDTO): Promise<Expense> {
 
         // sub is the logged in user id

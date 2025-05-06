@@ -68,6 +68,28 @@ export class RevenueService {
 
     }
 
+    getRevenuesByJobId(jobId: number): Promise<Revenue[]> {
+        const revenues = this.revenueRepository.find(
+            { 
+                where: { jobId },
+                relations: ["job", "passenger", "creditedToAccount", "user"] 
+            },
+            
+        );
+        return revenues;
+    }
+
+    getRevenuesByPassengerId(passengerId: number): Promise<Revenue[]> {
+        const revenues = this.revenueRepository.find(
+            { 
+                where: { passengerId },
+                relations: ["job", "passenger", "creditedToAccount", "user"] 
+            },
+            
+        );
+        return revenues;
+    }
+
     async createRevenue(ctx: JwtPayload, createRevenueDto: CreateRevenueDTO): Promise<Revenue> {
 
         const { tenantId, sub } = ctx;

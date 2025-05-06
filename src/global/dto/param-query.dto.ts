@@ -63,4 +63,8 @@ export class ParamDTO {
     @IsString()
     jobId: string
 
+    @IsOptional()
+    @IsString()
+    passengerId: string
+
 }

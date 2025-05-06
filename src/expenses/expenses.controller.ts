@@ -30,6 +30,23 @@ export class ExpenseController {
         return this.expenseService.getExpenses(queryDto, ctx)
     }
 
+    @Get("job/:jobId")
+    getExpensesByJobId(
+        @Param() params: ParamDTO
+    ): Promise<Expense[]> {
+        const parsedJobId = parseInt(params.jobId as string);
+        return this.expenseService.getExpensesByJobId(parsedJobId);
+    }
+
+    
+    @Get("passenger/:passengerId")
+    getExpensesByPassengerId(
+        @Param() params: ParamDTO
+    ): Promise<Expense[]> {
+        const parsedPassengerId = parseInt(params.passengerId as string);
+        return this.expenseService.getExpensesByPassengerId(parsedPassengerId);
+    }
+
     @Post("create")
     createExpense(
         @Body() createExpenseDto: CreateExpenseDTO,
