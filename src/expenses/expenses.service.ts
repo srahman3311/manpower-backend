@@ -57,6 +57,7 @@ export class ExpenseService {
                             .leftJoinAndSelect("expense.tenant", "tenant")
                             .leftJoinAndSelect("expense.job", "job")
                             .leftJoinAndSelect("expense.passenger", "passenger")
+                            .leftJoinAndSelect("passenger.passport", "passport")
                             .leftJoinAndSelect("expense.debitedFromAccount", "debitedFromAccount")
                             .leftJoinAndSelect("expense.user", "user")
                             .orderBy("expense.createdAt", "DESC")

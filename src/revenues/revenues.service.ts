@@ -59,6 +59,7 @@ export class RevenueService {
                             .leftJoinAndSelect("revenue.creditedToAccount", "creditedToAccount")
                             .leftJoinAndSelect("revenue.user", "user")
                             .leftJoinAndSelect("revenue.passenger", "passenger")
+                            .leftJoinAndSelect("passenger.passport", "passport")
                             .orderBy("revenue.createdAt", "DESC")
                             .skip(parseInt(skip))
                             .take(parseInt(limit))
